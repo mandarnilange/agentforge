@@ -7,7 +7,10 @@ import { createCoreApp } from "../di/app.js";
 // Read version from package.json so CLI --version stays in sync with the
 // published package. File layout: dist/cli/index.js → ../../package.json.
 const pkgPath = fileURLToPath(new URL("../../package.json", import.meta.url));
-const pkgVersion = (JSON.parse(readFileSync(pkgPath, "utf-8")) as { version: string }).version;
+const pkgVersion = (
+	JSON.parse(readFileSync(pkgPath, "utf-8")) as { version: string }
+).version;
+
 import { registerDashboardCommand } from "./commands/dashboard.js";
 import { registerExecCommand } from "./commands/exec.js";
 import { registerGateCommand } from "./commands/gate.js";

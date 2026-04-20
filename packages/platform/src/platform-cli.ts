@@ -64,7 +64,9 @@ process.once("SIGTERM", (sig) => void shutdownTelemetry(sig));
 
 // Read version from package.json. File layout: dist/platform-cli.js → ../package.json.
 const pkgPath = fileURLToPath(new URL("../package.json", import.meta.url));
-const pkgVersion = (JSON.parse(readFileSync(pkgPath, "utf-8")) as { version: string }).version;
+const pkgVersion = (
+	JSON.parse(readFileSync(pkgPath, "utf-8")) as { version: string }
+).version;
 
 const program = new Command();
 
