@@ -1,0 +1,31 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Test Suite
+description: Summary of generated API test suite
+type: object
+required: [summary, framework, testFiles, results]
+properties:
+  summary:
+    type: string
+  framework:
+    type: string
+  testFiles:
+    type: array
+    items:
+      type: object
+      required: [path, category, testCount]
+      properties:
+        path: { type: string }
+        category:
+          type: string
+          enum: [unit, integration, e2e, contract]
+        testCount: { type: integer }
+  results:
+    type: object
+    required: [passed, failed, coverage]
+    properties:
+      passed: { type: integer }
+      failed: { type: integer }
+      coverage: { type: number }
+  scenariosCovered:
+    type: array
+    items: { type: string }

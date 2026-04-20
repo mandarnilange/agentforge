@@ -1,0 +1,55 @@
+services:
+
+  # ── Dashboard ──────────────────────────────────────────────────────────────
+  # AgentForge control-plane dashboard. Open http://localhost:3001
+  dashboard:
+    build: .
+    command: dashboard
+    ports:
+      - "${PORT:-3001}:${PORT:-3001}"
+    volumes:
+      - ./output:/app/output
+    env_file: .env
+    environment:
+      AGENTFORGE_OUTPUT_DIR: /app/output
+      PORT: ${PORT:-3001}
+    restart: unless-stopped
+
+  # ── Pipeline Runner ────────────────────────────────────────────────────────
+  # One-shot: runs a pipeline and exits. Visible in dashboard while running.
+  #
+  # Usage:
+  #   PROJECT=taskflow BRIEF_FILE=./brief.txt docker compose run --rm runner
+  #   PROJECT=myapp BRIEF="Build a todo app" docker compose run --rm runner
+  runner:
+    build: .
+    command: run
+    volumes:
+      - ./output:/app/output
+    env_file: .env
+    environment:
+      AGENTFORGE_OUTPUT_DIR: /app/output
+      PROJECT: ${PROJECT:-my-project}
+      PIPELINE: ${PIPELINE:-simple-sdlc}
+      BRIEF_FILE: ${BRIEF_FILE:-}
+      BRIEF: ${BRIEF:-}
+    profiles:
+      - runner
+
+  # ── Gate Action ────────────────────────────────────────────────────────────
+  # Approve, reject, or request revision on a gate shown in the dashboard.
+  #
+  # Usage:
+  #   GATE_ID=<id> GATE_ACTION=approve docker compose run --rm gate
+  gate:
+    build: .
+    command: gate
+    volumes:
+      - ./output:/app/output
+    env_file: .env
+    environment:
+      AGENTFORGE_OUTPUT_DIR: /app/output
+      GATE_ID: ${GATE_ID:-}
+      GATE_ACTION: ${GATE_ACTION:-approve}
+    profiles:
+      - gate

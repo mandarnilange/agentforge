@@ -1,0 +1,41 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Transform Code
+description: Summary of business-logic transformation layer code
+type: object
+required: [summary, transformationsBuilt, filesGenerated, testResults]
+properties:
+  summary: { type: string }
+  transformationsBuilt:
+    type: array
+    items:
+      type: object
+      required: [name, type, description]
+      properties:
+        name: { type: string }
+        type:
+          type: string
+          enum: [business-rule, aggregation, enrichment, denormalisation, formatting]
+        description: { type: string }
+        inputFields:
+          type: array
+          items: { type: string }
+        outputFields:
+          type: array
+          items: { type: string }
+  filesGenerated:
+    type: array
+    items:
+      type: object
+      required: [path]
+      properties:
+        path: { type: string }
+        description: { type: string }
+  testResults:
+    type: object
+    required: [passed, failed, status]
+    properties:
+      passed: { type: integer, minimum: 0 }
+      failed: { type: integer, minimum: 0 }
+      status:
+        type: string
+        enum: [all-passed, some-failed, no-tests, error]

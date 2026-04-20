@@ -1,0 +1,8 @@
+{
+	"name": "seo-review",
+	"displayName": "SEO Review",
+	"description": "4-agent SEO audit pipeline: Technical Audit → Keyword Analysis → Content Audit → Action Plan. Full site analysis with prioritised recommendations.",
+	"tags": ["seo", "content", "marketing", "audit"],
+	"agents": 4,
+	"executor": "pi-ai"
+}

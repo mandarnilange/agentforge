@@ -1,0 +1,37 @@
+apiVersion: agentforge/v1
+kind: AgentDefinition
+metadata:
+  name: analyst
+  displayName: Analyst
+  description: Business Analyst — transforms raw briefs into structured requirements with epics and user stories
+  phase: "1"
+  role: analyst
+  humanEquivalent: Business Analyst
+
+spec:
+  executor: pi-ai
+
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-20250514
+    maxTokens: 16384
+    thinking: medium
+
+  systemPrompt:
+    file: prompts/analyst.system.md
+
+  inputs:
+    - type: raw-brief
+      required: true
+
+  outputs:
+    - type: requirements
+      schema: schemas/requirements.schema.yaml
+
+  resources:
+    budget:
+      maxTotalTokens: 40000
+      maxCostUsd: 0.10
+    # Per-agent wall-clock timeout override. Uncomment to override
+    # AGENTFORGE_LLM_TIMEOUT_SECONDS (default 600s). Set to 0 to disable.
+    # timeoutSeconds: 600

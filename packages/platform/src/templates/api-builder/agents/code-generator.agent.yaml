@@ -1,0 +1,148 @@
+apiVersion: agentforge/v1
+kind: AgentDefinition
+metadata:
+  name: code-generator
+  displayName: Code Generator
+  description: Backend Developer — generates API server code from the OpenAPI spec with automated test-fix loop
+  phase: "2"
+  role: backend-developer
+  humanEquivalent: Backend Developer
+
+spec:
+  executor: pi-coding-agent
+
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    maxTokens: 32768
+    thinking: high
+
+  systemPrompt:
+    file: prompts/code-generator.system.md
+
+  tools:
+    - read
+    - write
+    - edit
+    - bash
+    - grep
+    - find
+
+  inputs:
+    - type: api-spec
+      required: true
+
+  outputs:
+    - type: api-code
+      schema: schemas/api-code.schema.yaml
+
+  definitions:
+    setup-project:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        mkdir -p src/{routes,middleware,services,models} tests
+        echo "Project structure ready"
+      description: Create project directory structure
+      continueOnError: true
+
+    validate-spec:
+      type: validate
+      schema: api-spec
+      input: api-spec
+      description: Verify the API spec is valid before generating code
+
+    generate-api:
+      type: llm
+      instructions: |
+        Generate the full API server implementation from the spec.
+        Create route handlers, middleware, services, models, and config files.
+
+    install-deps:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        if [ -f package.json ]; then
+          npm install 2>&1
+        fi
+        echo "Dependencies installed"
+      description: Install project dependencies
+      continueOnError: true
+      captureOutput: true
+
+    lint-code:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        npx eslint src/ --fix 2>&1 || true
+        npx prettier --write "src/**/*.{ts,js}" 2>&1 || true
+        echo "Lint complete"
+      description: Lint and format generated source code
+      continueOnError: true
+
+    run-tests:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        npm test 2>&1
+      description: Execute the test suite
+      continueOnError: true
+      captureOutput: true
+
+    test-gate:
+      type: script
+      run: |
+        if [ "{{steps.run-tests.exitCode}}" = "0" ]; then echo "PASS"; else echo "false"; fi
+      description: >
+        "PASS" exits the fix loop, "false" continues it.
+      continueOnError: true
+
+    needs-fix:
+      type: script
+      run: |
+        if [ "{{steps.run-tests.exitCode}}" = "0" ]; then echo "false"; else echo "fix"; fi
+      description: >
+        "fix" triggers fix-api step, "false" skips it.
+      continueOnError: true
+
+    fix-api:
+      type: llm
+      instructions: |
+        Fix attempt {{loop.iteration}} of {{loop.maxIterations}}.
+        Test failures:
+        {{steps.run-tests.output}}
+        Diagnose and fix the root cause. Do not modify tests unless they are genuinely wrong.
+
+    validate-output:
+      type: validate
+      schema: api-code
+      description: Validate api-code artifact against schema
+
+  flow:
+    - step: setup-project
+    - step: validate-spec
+    - step: generate-api
+    - step: install-deps
+    - step: lint-code
+    - loop:
+        until: "{{steps.test-gate.output}}"
+        maxIterations: 3
+        do:
+          - step: run-tests
+          - step: test-gate
+          - step: needs-fix
+          - step: fix-api
+            condition: "{{steps.needs-fix.output}}"
+    - step: validate-output
+
+  nodeAffinity:
+    preferred:
+      - capability: docker
+
+  resources:
+    budget:
+      maxTotalTokens: 120000
+      maxCostUsd: 0.60
+    # Coding agents do iterative work; give them a longer wall-clock budget.
+    # Overrides AGENTFORGE_LLM_TIMEOUT_SECONDS (default 600s). Set to 0 to disable.
+    timeoutSeconds: 1200

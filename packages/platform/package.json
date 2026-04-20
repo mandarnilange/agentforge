@@ -1,0 +1,71 @@
+{
+	"name": "agentforge",
+	"version": "0.2.0",
+	"description": "Production infrastructure for AgentForge — multi-provider LLMs, Docker/remote executors, Postgres state, full OTel, multi-node workers",
+	"type": "module",
+	"bin": {
+		"agentforge": "./dist/platform-cli.js"
+	},
+	"main": "./dist/platform-cli.js",
+	"types": "./dist/platform-cli.d.ts",
+	"exports": {
+		".": "./dist/platform-cli.js",
+		"./adapters/*": "./dist/adapters/*",
+		"./control-plane/*": "./dist/control-plane/*",
+		"./nodes/*": "./dist/nodes/*",
+		"./state/*": "./dist/state/*",
+		"./observability/*": "./dist/observability/*",
+		"./cli/*": "./dist/cli/*"
+	},
+	"scripts": {
+		"build": "npm run --prefix ../.. build",
+		"typecheck": "tsc --noEmit",
+		"pack:dry-run": "npm pack --dry-run",
+		"prepublishOnly": "npm run --prefix ../.. build"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"homepage": "https://github.com/mandarnilange/agentforge#readme",
+	"bugs": {
+		"url": "https://github.com/mandarnilange/agentforge/issues"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mandarnilange/agentforge.git",
+		"directory": "packages/platform"
+	},
+	"keywords": [
+		"ai",
+		"agents",
+		"agentforge",
+		"distributed",
+		"postgresql",
+		"docker",
+		"opentelemetry",
+		"enterprise",
+		"pipeline"
+	],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"dependencies": {
+		"agentforge-core": "^0.2.0",
+		"dockerode": "^4.0.10",
+		"pg": "^8.20.0",
+		"@opentelemetry/sdk-node": "^0.214.0",
+		"@opentelemetry/exporter-trace-otlp-http": "^0.214.0",
+		"@opentelemetry/auto-instrumentations-node": "^0.72.0",
+		"@opentelemetry/instrumentation-http": "^0.214.0",
+		"@opentelemetry/instrumentation-pg": "^0.66.0"
+	},
+	"peerDependencies": {
+		"agentforge-core": "^0.2.0"
+	}
+}

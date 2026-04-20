@@ -1,0 +1,105 @@
+apiVersion: agentforge/v1
+kind: AgentDefinition
+metadata:
+  name: validator
+  displayName: Validator
+  description: Data Quality Engineer — validates ETL output against schema contracts with automated check-fix loop
+  phase: "3"
+  role: data-quality-engineer
+  humanEquivalent: Data Quality Engineer
+
+spec:
+  executor: pi-coding-agent
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    maxTokens: 32768
+    thinking: high
+  systemPrompt:
+    file: prompts/validator.system.md
+  tools:
+    - read
+    - write
+    - edit
+    - bash
+    - grep
+    - find
+  inputs:
+    - type: data-schema
+      required: true
+    - type: etl-code
+      required: true
+  outputs:
+    - type: validation-report
+      schema: schemas/validation-report.schema.yaml
+
+  definitions:
+    run-validation:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        if [ -f requirements.txt ]; then
+          python -m pytest tests/validation/ -v 2>&1 || python validate.py 2>&1
+        elif [ -f package.json ]; then
+          npm run validate 2>&1 || npm test -- --grep validation 2>&1
+        fi
+      continueOnError: true
+      captureOutput: true
+
+    check-gate:
+      type: script
+      run: |
+        if [ "{{steps.run-validation.exitCode}}" = "0" ]; then echo "PASS"; else echo "false"; fi
+      continueOnError: true
+
+    needs-fix:
+      type: script
+      run: |
+        if [ "{{steps.run-validation.exitCode}}" = "0" ]; then echo "false"; else echo "fix"; fi
+      continueOnError: true
+
+    fix-validation:
+      type: llm
+      instructions: |
+        Fix attempt {{loop.iteration}} of {{loop.maxIterations}}.
+        Validation failures:
+        {{steps.run-validation.output}}
+        Fix the ETL transformation logic to meet schema contracts.
+        Check: null values in required fields, type coercions, enum constraints, array cardinality.
+
+    generate-report:
+      type: llm
+      instructions: |
+        Generate a validation report summarising:
+        - Which checks passed and failed
+        - Data quality metrics (null rates, type errors, constraint violations)
+        - Recommendations for data quality improvements
+
+    validate-output:
+      type: validate
+      schema: validation-report
+      continueOnError: true
+
+  flow:
+    - loop:
+        until: "{{steps.check-gate.output}}"
+        maxIterations: 3
+        do:
+          - step: run-validation
+          - step: check-gate
+          - step: needs-fix
+          - step: fix-validation
+            condition: "{{steps.needs-fix.output}}"
+    - step: generate-report
+    - step: validate-output
+
+  nodeAffinity:
+    preferred:
+      - capability: docker
+  resources:
+    budget:
+      maxTotalTokens: 100000
+      maxCostUsd: 0.50
+    # Coding agents do iterative work; give them a longer wall-clock budget.
+    # Overrides AGENTFORGE_LLM_TIMEOUT_SECONDS (default 600s). Set to 0 to disable.
+    timeoutSeconds: 900

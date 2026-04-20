@@ -1,0 +1,52 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Research Notes
+description: Research brief with facts, angles, and audience insights for content creation
+type: object
+required: [topic, audienceProfile, keyFacts, mainArgument, supportingPoints, examples]
+properties:
+  topic: { type: string }
+  audienceProfile:
+    type: object
+    required: [description, knowledgeLevel, primaryQuestion]
+    properties:
+      description: { type: string }
+      knowledgeLevel:
+        type: string
+        enum: [beginner, intermediate, advanced, expert]
+      primaryQuestion: { type: string }
+      painPoints:
+        type: array
+        items: { type: string }
+  keyFacts:
+    type: array
+    items:
+      type: object
+      required: [fact, source]
+      properties:
+        fact: { type: string }
+        source: { type: string }
+        useFor: { type: string }
+  mainArgument: { type: string }
+  supportingPoints:
+    type: array
+    items: { type: string }
+    minItems: 2
+  counterArguments:
+    type: array
+    items:
+      type: object
+      required: [argument, response]
+      properties:
+        argument: { type: string }
+        response: { type: string }
+  examples:
+    type: array
+    items:
+      type: object
+      required: [example, illustrates]
+      properties:
+        example: { type: string }
+        illustrates: { type: string }
+  uniqueAngles:
+    type: array
+    items: { type: string }

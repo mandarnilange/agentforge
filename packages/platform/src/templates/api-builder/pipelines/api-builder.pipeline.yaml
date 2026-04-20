@@ -1,0 +1,64 @@
+apiVersion: agentforge/v1
+kind: PipelineDefinition
+metadata:
+  name: api-builder
+  displayName: API Builder Pipeline
+  description: Spec Writer → parallel Code Generator + Test Generator (both with fix loops) → Doc Writer
+
+spec:
+  input:
+    - name: brief
+      type: raw-brief
+      description: API description — what endpoints, auth, resources, and business logic are needed
+      required: true
+
+  repository:
+    mode: auto-init
+
+  phases:
+    - name: spec
+      phase: 1
+      agents:
+        - spec-writer
+      gate:
+        required: true
+        approvers:
+          minCount: 1
+          roles: [admin, reviewer]
+
+    - name: build
+      phase: 2
+      parallel: true
+      agents:
+        - code-generator
+        - test-generator
+      gate:
+        required: true
+        waitForAll: true
+
+    - name: document
+      phase: 3
+      agents:
+        - doc-writer
+
+  gateDefaults:
+    actions:
+      - approve
+      - reject
+      - request-revision
+    timeout: 48h
+
+  wiring:
+    code-generator:
+      api-spec: spec-writer
+    test-generator:
+      api-spec: spec-writer
+    doc-writer:
+      api-spec: spec-writer
+      api-code: code-generator
+      test-suite: test-generator
+
+  retryPolicy:
+    maxRetries: 2
+    backoff: exponential
+    initialDelay: 30s

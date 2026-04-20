@@ -1,0 +1,114 @@
+apiVersion: agentforge/v1
+kind: AgentDefinition
+metadata:
+  name: transformer
+  displayName: Transformer
+  description: Data Transformation Engineer — builds business logic transformations and enrichment steps
+  phase: "4"
+  role: data-engineer
+  humanEquivalent: Data Engineer
+
+spec:
+  executor: pi-coding-agent
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-20250514
+    maxTokens: 32768
+    thinking: high
+  systemPrompt:
+    file: prompts/transformer.system.md
+  tools:
+    - read
+    - write
+    - edit
+    - bash
+    - grep
+    - find
+  inputs:
+    - type: data-schema
+      required: true
+    - type: etl-code
+      required: true
+    - type: validation-report
+      required: true
+  outputs:
+    - type: transform-code
+      schema: schemas/transform-code.schema.yaml
+
+  definitions:
+    analyse-validation:
+      type: llm
+      instructions: |
+        Review the validation report to understand what transformations are needed.
+        Identify: data quality issues to fix, enrichment opportunities, denormalisation requirements.
+
+    generate-transformations:
+      type: llm
+      instructions: |
+        Build the transformation layer on top of the validated ETL output.
+        Include: business rule application, data enrichment, aggregations, denormalisation,
+        derived field calculation, and output formatting for the target system.
+
+    run-transform-tests:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        if [ -f requirements.txt ]; then
+          if [ -d tests/transform ]; then python -m pytest tests/transform/ -v 2>&1
+          else python -m pytest -v 2>&1
+          fi
+        elif [ -f package.json ]; then
+          npm run test:transform 2>&1 || npm test 2>&1
+        fi
+      continueOnError: true
+      captureOutput: true
+
+    transform-gate:
+      type: script
+      run: |
+        if [ "{{steps.run-transform-tests.exitCode}}" = "0" ]; then echo "PASS"; else echo "false"; fi
+      continueOnError: true
+
+    needs-fix:
+      type: script
+      run: |
+        if [ "{{steps.run-transform-tests.exitCode}}" = "0" ]; then echo "false"; else echo "fix"; fi
+      continueOnError: true
+
+    fix-transformations:
+      type: llm
+      instructions: |
+        Fix attempt {{loop.iteration}} of {{loop.maxIterations}}.
+        Transform test failures:
+        {{steps.run-transform-tests.output}}
+        Fix the transformation logic. Common issues: aggregation edge cases, null propagation, join logic.
+
+    validate-output:
+      type: validate
+      schema: transform-code
+      continueOnError: true
+
+  flow:
+    - step: analyse-validation
+    - step: generate-transformations
+    - loop:
+        until: "{{steps.transform-gate.output}}"
+        maxIterations: 3
+        do:
+          - step: run-transform-tests
+          - step: transform-gate
+          - step: needs-fix
+          - step: fix-transformations
+            condition: "{{steps.needs-fix.output}}"
+    - step: validate-output
+
+  nodeAffinity:
+    preferred:
+      - capability: docker
+  resources:
+    budget:
+      maxTotalTokens: 100000
+      maxCostUsd: 0.50
+    # Coding agents do iterative work; give them a longer wall-clock budget.
+    # Overrides AGENTFORGE_LLM_TIMEOUT_SECONDS (default 600s). Set to 0 to disable.
+    timeoutSeconds: 1200

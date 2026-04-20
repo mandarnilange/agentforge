@@ -1,0 +1,43 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Security Findings
+description: Security review findings mapped to OWASP categories
+type: object
+required: [summary, findings, dependencyVulnerabilities, secretsFound]
+properties:
+  summary: { type: string }
+  findings:
+    type: array
+    items:
+      type: object
+      required: [severity, owaspCategory, file, description, recommendation]
+      properties:
+        severity:
+          type: string
+          enum: [critical, high, medium, low, info]
+        owaspCategory:
+          type: string
+          description: "e.g. A01-Broken-Access-Control"
+        file: { type: string }
+        line: { type: integer }
+        description: { type: string }
+        recommendation: { type: string }
+  dependencyVulnerabilities:
+    type: array
+    items:
+      type: object
+      required: [package, severity]
+      properties:
+        package: { type: string }
+        version: { type: string }
+        severity: { type: string }
+        cve: { type: string }
+        fix: { type: string }
+  secretsFound:
+    type: array
+    items:
+      type: object
+      required: [file, type]
+      properties:
+        file: { type: string }
+        type: { type: string }
+        recommendation: { type: string }

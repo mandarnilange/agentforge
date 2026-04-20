@@ -1,0 +1,25 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Edited Content
+description: Editor-reviewed article with changes and editorial notes
+type: object
+required: [title, content, wordCount, editorialNotes]
+properties:
+  title: { type: string }
+  content:
+    type: string
+    description: "Full revised article in markdown format"
+  wordCount: { type: integer, minimum: 0 }
+  editorialNotes:
+    type: array
+    items:
+      type: object
+      required: [type, description]
+      properties:
+        type:
+          type: string
+          enum: [structural, clarity, factual, flow, tone, cta]
+        description: { type: string }
+        section: { type: string }
+  overallAssessment:
+    type: string
+    enum: [publication-ready, minor-polish-needed, significant-revision-needed]

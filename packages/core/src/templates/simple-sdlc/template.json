@@ -1,0 +1,8 @@
+{
+	"name": "simple-sdlc",
+	"displayName": "Simple SDLC",
+	"description": "3-agent lightweight SDLC: Analyst → Architect → Developer. Includes test-fix loop, local and Docker node configs.",
+	"tags": ["sdlc", "starter", "full-stack"],
+	"agents": 3,
+	"executor": "mixed"
+}

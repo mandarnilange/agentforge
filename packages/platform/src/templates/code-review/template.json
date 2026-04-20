@@ -1,0 +1,8 @@
+{
+	"name": "code-review",
+	"displayName": "Code Review",
+	"description": "4-agent automated code review: Scope Analyst → Quality Reviewer + Security Scanner (parallel) → Report Writer. Deep analysis with actionable findings.",
+	"tags": ["code-review", "security", "quality", "devops"],
+	"agents": 4,
+	"executor": "mixed"
+}

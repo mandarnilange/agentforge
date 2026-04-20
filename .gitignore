@@ -1,0 +1,21 @@
+node_modules/
+dist/
+output/
+.env
+*.log
+.DS_Store
+coverage/
+*.db
+.turbo/
+*.tsbuildinfo
+
+# Pipeline output scaffolds (prevent auto-created root dirs)
+/src/
+/tests/
+/db/
+/infra/
+/monitoring/
+/_archive/
+.grepai/
+
+graphify-out/

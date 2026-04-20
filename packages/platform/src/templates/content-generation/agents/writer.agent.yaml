@@ -1,0 +1,130 @@
+apiVersion: agentforge/v1
+kind: AgentDefinition
+metadata:
+  name: writer
+  displayName: Writer
+  description: Content Writer — drafts full article with self-review and revision loop for quality
+  phase: "3"
+  role: content-writer
+  humanEquivalent: Senior Content Writer
+
+spec:
+  executor: pi-coding-agent
+
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    maxTokens: 32768
+    thinking: high
+
+  systemPrompt:
+    file: prompts/writer.system.md
+
+  tools:
+    - read
+    - write
+    - edit
+
+  inputs:
+    - type: raw-brief
+      required: true
+    - type: research-notes
+      required: true
+    - type: content-outline
+      required: true
+
+  outputs:
+    - type: article-draft
+      schema: schemas/article-draft.schema.yaml
+
+  definitions:
+    write-draft:
+      type: llm
+      instructions: |
+        Write the full article following the content outline.
+        Use research notes for facts, statistics, and supporting points.
+        Match the tone and audience specified in the brief.
+        Target the word count from the brief (default 1200–1800 words).
+
+    self-review:
+      type: llm
+      instructions: |
+        Review the draft you just wrote. Evaluate:
+        1. Does every section in the outline have adequate coverage?
+        2. Are all facts from the research notes correctly incorporated?
+        3. Is the tone consistent throughout?
+        4. Are there any weak paragraphs that need strengthening?
+        5. Does the introduction hook and conclusion call-to-action work?
+
+        Output a quality score (1–10) and a list of specific improvements needed.
+        If score >= 8, output "APPROVE". If score < 8, output the improvements list.
+
+    quality-gate:
+      type: script
+      run: |
+        # Check if self-review approved the draft
+        if echo "{{steps.self-review.output}}" | grep -q "APPROVE"; then
+          echo "PASS"
+        else
+          echo "false"
+        fi
+      description: >
+        "PASS" if the self-review approved the draft, "false" if revision is needed.
+      continueOnError: true
+
+    needs-revision:
+      type: script
+      run: |
+        if echo "{{steps.self-review.output}}" | grep -q "APPROVE"; then
+          echo "false"
+        else
+          echo "revise"
+        fi
+      continueOnError: true
+
+    revise-draft:
+      type: llm
+      instructions: |
+        Revision {{loop.iteration}} of {{loop.maxIterations}}.
+
+        Self-review feedback:
+        {{steps.self-review.output}}
+
+        Apply all the suggested improvements to the draft.
+        Re-read the full article after revising to ensure coherence.
+
+    save-draft:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        mkdir -p content
+        cat > content/article-draft.md <<'DRAFT_EOF'
+        {{steps.revise-draft.output || steps.write-draft.output}}
+        DRAFT_EOF
+        echo "Draft saved to content/article-draft.md"
+      continueOnError: true
+
+  flow:
+    - step: write-draft
+    - loop:
+        until: "{{steps.quality-gate.output}}"
+        maxIterations: 2
+        do:
+          - step: self-review
+          - step: quality-gate
+          - step: needs-revision
+          - step: revise-draft
+            condition: "{{steps.needs-revision.output}}"
+    - step: save-draft
+
+  nodeAffinity:
+    preferred:
+      - capability: llm-access
+
+  resources:
+    budget:
+      maxTotalTokens: 80000
+      maxCostUsd: 0.40
+    # Coding agents do iterative work; give them a longer wall-clock budget.
+    # Overrides AGENTFORGE_LLM_TIMEOUT_SECONDS (default 600s). Set to 0 to disable.
+    timeoutSeconds: 900

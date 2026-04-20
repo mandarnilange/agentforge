@@ -1,0 +1,8 @@
+{
+	"name": "api-builder",
+	"displayName": "API Builder",
+	"description": "4-agent REST API factory: Spec Writer → Code Generator → Test Generator → Doc Writer. Parallel code+test generation with fix loops.",
+	"tags": ["api", "backend", "rest", "openapi"],
+	"agents": 4,
+	"executor": "mixed"
+}

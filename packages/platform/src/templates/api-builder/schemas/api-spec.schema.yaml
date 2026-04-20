@@ -1,0 +1,54 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: API Spec
+description: Complete API specification including endpoints, auth, and error conventions
+type: object
+required: [title, version, baseUrl, authScheme, endpoints]
+properties:
+  title:
+    type: string
+    description: "API name, e.g. 'Task Manager API'"
+  version:
+    type: string
+    description: "Semver version, e.g. '1.0.0'"
+  description:
+    type: string
+  baseUrl:
+    type: string
+    description: "Base path, e.g. '/api/v1'"
+  authScheme:
+    type: string
+    description: "JWT Bearer / API Key / OAuth2 / None"
+  errorFormat:
+    type: object
+    description: "Standard error response shape"
+  endpoints:
+    type: array
+    items:
+      type: object
+      required: [method, path, description, auth]
+      properties:
+        method:
+          type: string
+          enum: [GET, POST, PUT, PATCH, DELETE]
+        path:
+          type: string
+        description:
+          type: string
+        auth:
+          type: boolean
+        requestBody:
+          type: object
+        responseBody:
+          type: object
+        errorCodes:
+          type: array
+          items:
+            type: object
+            required: [code, reason]
+            properties:
+              code: { type: integer }
+              reason: { type: string }
+    minItems: 1
+  pagination:
+    type: object
+    description: "Pagination convention for list endpoints"

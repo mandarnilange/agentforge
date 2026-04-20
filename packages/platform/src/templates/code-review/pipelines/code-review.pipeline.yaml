@@ -1,0 +1,61 @@
+apiVersion: agentforge/v1
+kind: PipelineDefinition
+metadata:
+  name: code-review
+  displayName: Code Review Pipeline
+  description: Scope Analyst → parallel Quality Reviewer + Security Scanner → Report Writer
+
+spec:
+  input:
+    - name: brief
+      type: raw-brief
+      description: |
+        PR description, changed files or diff, repo context, language/framework,
+        and any specific review focus areas (performance, security, etc.).
+      required: true
+
+  repository:
+    mode: existing
+
+  phases:
+    - name: scope
+      phase: 1
+      agents:
+        - scope-analyst
+
+    - name: review
+      phase: 2
+      parallel: true
+      agents:
+        - quality-reviewer
+        - security-scanner
+      gate:
+        required: false
+        waitForAll: true
+
+    - name: report
+      phase: 3
+      agents:
+        - report-writer
+
+  gateDefaults:
+    actions:
+      - approve
+      - reject
+      - request-revision
+    timeout: 24h
+
+  wiring:
+    quality-reviewer:
+      review-scope: scope-analyst
+    security-scanner:
+      review-scope: scope-analyst
+    report-writer:
+      review-scope: scope-analyst
+      quality-findings: quality-reviewer
+      security-findings: security-scanner
+
+  retryPolicy:
+    maxRetries: 1
+    backoff: linear
+    initialDelay: 15s

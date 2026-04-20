@@ -1,0 +1,56 @@
+apiVersion: agentforge/v1
+kind: PipelineDefinition
+metadata:
+  name: simple-sdlc
+  displayName: Simple SDLC Pipeline
+  description: Lightweight 3-agent SDLC — Analyst → Architect (with gate) → Developer (with test-fix loop)
+
+spec:
+  input:
+    - name: brief
+      type: raw-brief
+      description: Project brief, feature description, or problem statement
+      required: true
+
+  repository:
+    mode: auto-init
+
+  phases:
+    - name: requirements
+      phase: 1
+      agents:
+        - analyst
+
+    - name: architecture
+      phase: 2
+      agents:
+        - architect
+      gate:
+        required: true
+        approvers:
+          minCount: 1
+          roles: [admin, reviewer]
+
+    - name: implementation
+      phase: 3
+      agents:
+        - developer
+
+  gateDefaults:
+    actions:
+      - approve
+      - reject
+      - request-revision
+    timeout: 72h
+
+  wiring:
+    architect:
+      requirements: analyst
+    developer:
+      requirements: analyst
+      architecture-plan: architect
+
+  retryPolicy:
+    maxRetries: 2
+    backoff: exponential
+    initialDelay: 30s

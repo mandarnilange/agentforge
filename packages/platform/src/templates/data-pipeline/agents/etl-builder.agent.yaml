@@ -1,0 +1,126 @@
+apiVersion: agentforge/v1
+kind: AgentDefinition
+metadata:
+  name: etl-builder
+  displayName: ETL Builder
+  description: Data Engineer — builds extract, transform, load code with automated test-fix loop
+  phase: "2"
+  role: data-engineer
+  humanEquivalent: Data Engineer
+
+spec:
+  executor: pi-coding-agent
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-20250514
+    maxTokens: 32768
+    thinking: high
+  systemPrompt:
+    file: prompts/etl-builder.system.md
+  tools:
+    - read
+    - write
+    - edit
+    - bash
+    - grep
+    - find
+  inputs:
+    - type: data-schema
+      required: true
+  outputs:
+    - type: etl-code
+      schema: schemas/etl-code.schema.yaml
+
+  definitions:
+    setup-workspace:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        mkdir -p src/{extract,transform,load,utils} tests config
+        echo "ETL workspace ready"
+      continueOnError: true
+
+    validate-schema:
+      type: validate
+      schema: data-schema
+      input: data-schema
+      description: Verify data schema before building ETL
+
+    generate-etl:
+      type: llm
+      instructions: |
+        Generate the full ETL pipeline from the data schema.
+        Create: extractors (source connectors), transformers (mapping/cleaning logic),
+        loaders (target writers), config files, and unit tests.
+
+    install-deps:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        if [ -f requirements.txt ]; then pip install -q -r requirements.txt 2>&1
+        elif [ -f package.json ]; then npm install 2>&1
+        fi
+      continueOnError: true
+      captureOutput: true
+
+    run-tests:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        if [ -f requirements.txt ]; then python -m pytest -v 2>&1
+        elif [ -f package.json ]; then npm test 2>&1
+        fi
+      continueOnError: true
+      captureOutput: true
+
+    test-gate:
+      type: script
+      run: |
+        if [ "{{steps.run-tests.exitCode}}" = "0" ]; then echo "PASS"; else echo "false"; fi
+      continueOnError: true
+
+    needs-fix:
+      type: script
+      run: |
+        if [ "{{steps.run-tests.exitCode}}" = "0" ]; then echo "false"; else echo "fix"; fi
+      continueOnError: true
+
+    fix-etl:
+      type: llm
+      instructions: |
+        Fix attempt {{loop.iteration}} of {{loop.maxIterations}}.
+        Test failures:
+        {{steps.run-tests.output}}
+        Fix the ETL logic. Common issues: type mismatches, null handling, encoding, date formats.
+
+    validate-output:
+      type: validate
+      schema: etl-code
+      continueOnError: true
+
+  flow:
+    - step: setup-workspace
+    - step: validate-schema
+    - step: generate-etl
+    - step: install-deps
+    - loop:
+        until: "{{steps.test-gate.output}}"
+        maxIterations: 3
+        do:
+          - step: run-tests
+          - step: test-gate
+          - step: needs-fix
+          - step: fix-etl
+            condition: "{{steps.needs-fix.output}}"
+    - step: validate-output
+
+  nodeAffinity:
+    preferred:
+      - capability: docker
+  resources:
+    budget:
+      maxTotalTokens: 120000
+      maxCostUsd: 0.60
+    # Coding agents do iterative work; give them a longer wall-clock budget.
+    # Overrides AGENTFORGE_LLM_TIMEOUT_SECONDS (default 600s). Set to 0 to disable.
+    timeoutSeconds: 1200

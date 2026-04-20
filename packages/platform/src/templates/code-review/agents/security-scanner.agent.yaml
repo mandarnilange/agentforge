@@ -1,0 +1,93 @@
+apiVersion: agentforge/v1
+kind: AgentDefinition
+metadata:
+  name: security-scanner
+  displayName: Security Scanner
+  description: Security Reviewer — identifies vulnerabilities, injection risks, auth flaws, and insecure dependencies
+  phase: "2"
+  role: security-reviewer
+  humanEquivalent: Security Engineer
+
+spec:
+  executor: pi-coding-agent
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    maxTokens: 32768
+    thinking: high
+  systemPrompt:
+    file: prompts/security-scanner.system.md
+  tools:
+    - read
+    - grep
+    - find
+    - bash
+  inputs:
+    - type: raw-brief
+      required: true
+    - type: review-scope
+      required: true
+  outputs:
+    - type: security-findings
+      schema: schemas/security-findings.schema.yaml
+
+  definitions:
+    scan-dependencies:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        if [ -f package.json ]; then
+          npm audit --json 2>/dev/null || npm audit 2>&1 || true
+        fi
+        if [ -f requirements.txt ]; then
+          pip-audit 2>&1 || safety check 2>&1 || true
+        fi
+        if [ -f go.mod ]; then
+          govulncheck ./... 2>&1 || true
+        fi
+      description: Scan dependencies for known vulnerabilities
+      continueOnError: true
+      captureOutput: true
+
+    scan-secrets:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        # Check for hardcoded secrets patterns
+        grep -rn --include="*.ts" --include="*.js" --include="*.py" --include="*.go" \
+          -E "(password|secret|api_key|apikey|token)\s*=\s*['\"][^'\"]{8,}" . 2>/dev/null | head -20 || true
+        grep -rn --include="*.env*" -iE "^[^#]*(PASSWORD|SECRET|KEY|TOKEN|CREDENTIAL|API)=" . 2>/dev/null | head -10 || true
+      description: Scan for hardcoded secrets and credentials
+      continueOnError: true
+      captureOutput: true
+
+    analyse-security:
+      type: llm
+      instructions: |
+        Perform a security review of the changeset.
+        Dependency vulnerabilities: {{steps.scan-dependencies.output}}
+        Potential secrets: {{steps.scan-secrets.output}}
+        Check OWASP Top 10: injection, broken auth, XSS, insecure design, misconfiguration,
+        vulnerable dependencies, auth failures, data exposure, SSRF, logging failures.
+
+    validate-output:
+      type: validate
+      schema: security-findings
+      continueOnError: true
+
+  flow:
+    - step: scan-dependencies
+    - step: scan-secrets
+    - step: analyse-security
+    - step: validate-output
+
+  nodeAffinity:
+    preferred:
+      - capability: docker
+  resources:
+    budget:
+      maxTotalTokens: 80000
+      maxCostUsd: 0.40
+    # Security analysis can be thorough; give it a longer wall-clock budget.
+    # Overrides AGENTFORGE_LLM_TIMEOUT_SECONDS (default 600s). Set to 0 to disable.
+    timeoutSeconds: 900

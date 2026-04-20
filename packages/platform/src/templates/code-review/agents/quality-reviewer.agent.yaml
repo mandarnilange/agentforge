@@ -1,0 +1,100 @@
+apiVersion: agentforge/v1
+kind: AgentDefinition
+metadata:
+  name: quality-reviewer
+  displayName: Quality Reviewer
+  description: Code Quality Reviewer — checks design, complexity, test coverage, and maintainability
+  phase: "2"
+  role: code-reviewer
+  humanEquivalent: Senior Engineer
+
+spec:
+  executor: pi-coding-agent
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-20250514
+    maxTokens: 32768
+    thinking: high
+  systemPrompt:
+    file: prompts/quality-reviewer.system.md
+  tools:
+    - read
+    - grep
+    - find
+    - bash
+  inputs:
+    - type: raw-brief
+      required: true
+    - type: review-scope
+      required: true
+  outputs:
+    - type: quality-findings
+      schema: schemas/quality-findings.schema.yaml
+
+  definitions:
+    read-changeset:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        if git rev-parse --quiet --verify HEAD~1 >/dev/null 2>&1; then
+          git diff HEAD~1 --stat
+          git diff HEAD~1 --name-only
+        else
+          echo "No git history (initial commit or shallow clone)"
+        fi
+      description: List changed files for review
+      continueOnError: true
+      captureOutput: true
+
+    analyse-quality:
+      type: llm
+      instructions: |
+        Perform a deep quality review of the changeset.
+        Changed files: {{steps.read-changeset.output}}
+        Focus areas from scope: {{inputs.review-scope}}
+        Check: design patterns, complexity, naming, test coverage, error handling, duplication.
+
+    run-static-analysis:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        if [ -f package.json ]; then
+          npx eslint . --format json 2>/dev/null || npx eslint . 2>&1 || true
+        elif [ -f pyproject.toml ]; then
+          python -m ruff check . 2>&1 || true
+        elif [ -f go.mod ]; then
+          go vet ./... 2>&1 || true
+        fi
+      description: Run static analysis tools on the codebase
+      continueOnError: true
+      captureOutput: true
+
+    enrich-findings:
+      type: llm
+      instructions: |
+        Combine your quality analysis with static analysis output:
+        {{steps.run-static-analysis.output}}
+        Deduplicate findings and add severity ratings.
+
+    validate-output:
+      type: validate
+      schema: quality-findings
+      continueOnError: true
+
+  flow:
+    - step: read-changeset
+    - step: analyse-quality
+    - step: run-static-analysis
+    - step: enrich-findings
+    - step: validate-output
+
+  nodeAffinity:
+    preferred:
+      - capability: docker
+  resources:
+    budget:
+      maxTotalTokens: 80000
+      maxCostUsd: 0.40
+    # Quality analysis can be thorough; give it a longer wall-clock budget.
+    # Overrides AGENTFORGE_LLM_TIMEOUT_SECONDS (default 600s). Set to 0 to disable.
+    timeoutSeconds: 900

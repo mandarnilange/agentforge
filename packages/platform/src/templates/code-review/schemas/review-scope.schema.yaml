@@ -1,0 +1,27 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Review Scope
+description: Defined review focus areas and risk classification for the changeset
+type: object
+required: [summary, riskLevel, changeType, qualityFocusAreas, securityFocusAreas]
+properties:
+  summary: { type: string }
+  riskLevel:
+    type: string
+    enum: [high, medium, low]
+  changeType:
+    type: string
+    enum: [feature, bugfix, refactor, dependency-update, config, docs]
+  qualityFocusAreas:
+    type: array
+    items: { type: string }
+  securityFocusAreas:
+    type: array
+    items: { type: string }
+  testingAdequacy:
+    type: object
+    properties:
+      hasTests: { type: boolean }
+      assessment: { type: string }
+  changedFiles:
+    type: array
+    items: { type: string }

@@ -1,0 +1,74 @@
+apiVersion: agentforge/v1
+kind: PipelineDefinition
+metadata:
+  name: content-generation
+  displayName: Content Generation Pipeline
+  description: Researcher → Outline Writer → gate → Writer (with internal draft-revise loop) → gate → Editor → SEO Optimizer
+
+spec:
+  input:
+    - name: brief
+      type: raw-brief
+      description: |
+        Topic, target audience, tone of voice, target word count, primary keywords,
+        publication channel, and any specific angles or constraints.
+      required: true
+
+  phases:
+    - name: research
+      phase: 1
+      agents:
+        - researcher
+
+    - name: outline
+      phase: 2
+      agents:
+        - outline-writer
+      gate:
+        required: true
+        approvers:
+          minCount: 1
+          roles: [admin, reviewer]
+
+    - name: write
+      phase: 3
+      agents:
+        - writer
+
+    - name: edit
+      phase: 4
+      agents:
+        - editor
+      gate:
+        required: true
+        approvers:
+          minCount: 1
+          roles: [admin, reviewer]
+
+    - name: optimise
+      phase: 5
+      agents:
+        - seo-optimizer
+
+  gateDefaults:
+    actions:
+      - approve
+      - reject
+      - request-revision
+    timeout: 48h
+
+  wiring:
+    outline-writer:
+      research-notes: researcher
+    writer:
+      research-notes: researcher
+      content-outline: outline-writer
+    editor:
+      article-draft: writer
+    seo-optimizer:
+      edited-content: editor
+
+  retryPolicy:
+    maxRetries: 1
+    backoff: linear
+    initialDelay: 15s

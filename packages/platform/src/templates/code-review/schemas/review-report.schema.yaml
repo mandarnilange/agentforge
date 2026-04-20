@@ -1,0 +1,53 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Review Report
+description: Consolidated code review report with prioritised findings
+type: object
+required: [verdict, summary, blockers, requiredChanges, suggestions]
+properties:
+  verdict:
+    type: string
+    enum: [approve, approve-with-minor-changes, requires-changes, reject]
+  summary: { type: string }
+  blockers:
+    type: array
+    description: "Critical findings — must fix before merge"
+    items:
+      type: object
+      required: [file, issue, why, fix]
+      properties:
+        file: { type: string }
+        line: { type: integer }
+        category:
+          type: string
+          enum: [quality, security]
+        issue: { type: string }
+        why: { type: string }
+        fix: { type: string }
+  requiredChanges:
+    type: array
+    description: "Major findings — should fix in this PR"
+    items:
+      type: object
+      required: [file, issue, fix]
+      properties:
+        file: { type: string }
+        issue: { type: string }
+        fix: { type: string }
+  suggestions:
+    type: array
+    description: "Minor and nitpick findings — can defer"
+    items:
+      type: object
+      required: [theme, description]
+      properties:
+        theme: { type: string }
+        description: { type: string }
+  positiveObservations:
+    type: array
+    items: { type: string }
+  dependencySummary:
+    type: object
+    properties:
+      criticalCves: { type: integer, minimum: 0 }
+      highCves: { type: integer, minimum: 0 }
+      recommendation: { type: string }

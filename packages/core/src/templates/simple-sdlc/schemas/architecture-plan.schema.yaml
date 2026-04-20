@@ -1,0 +1,198 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Architecture Plan
+description: Technical architecture including components, tech stack, API design, data model, and deployment topology
+type: object
+required:
+  - summary
+  - architecturalStyle
+  - components
+  - techStack
+  - apiDesign
+  - dataModel
+  - deploymentTopology
+  - architectureDecisions
+properties:
+  summary:
+    type: string
+    description: "2-3 sentence executive summary of the architecture"
+  architecturalStyle:
+    type: string
+    description: "Primary style chosen: monolith, microservices, serverless, event-driven, or hybrid"
+    enum: [monolith, microservices, serverless, event-driven, modular-monolith, hybrid]
+  components:
+    type: array
+    description: "System components — services, modules, data stores, external integrations"
+    items:
+      type: object
+      required:
+        - name
+        - type
+        - responsibility
+        - technology
+      properties:
+        name:
+          type: string
+          description: "Component name, e.g. 'Auth Service'"
+        type:
+          type: string
+          enum: [service, module, database, cache, queue, storage, external, gateway]
+        responsibility:
+          type: string
+          description: "What this component owns — single clear statement"
+        technology:
+          type: string
+          description: "Technology used, e.g. 'Node.js + Express', 'PostgreSQL'"
+        dependsOn:
+          type: array
+          items:
+            type: string
+          description: "Names of components this one depends on"
+    minItems: 1
+  techStack:
+    type: object
+    description: "Technology choices by layer"
+    required:
+      - language
+      - runtime
+      - framework
+      - database
+    properties:
+      language:
+        type: string
+        description: "Primary language, e.g. 'TypeScript'"
+      runtime:
+        type: string
+        description: "Runtime environment, e.g. 'Node.js 20'"
+      framework:
+        type: string
+        description: "Primary framework, e.g. 'Express', 'FastAPI', 'Gin'"
+      database:
+        type: string
+        description: "Primary data store, e.g. 'PostgreSQL 15'"
+      cache:
+        type: string
+        description: "Caching layer if applicable, e.g. 'Redis'"
+      messaging:
+        type: string
+        description: "Message broker if applicable, e.g. 'RabbitMQ'"
+      testing:
+        type: string
+        description: "Testing framework, e.g. 'Vitest', 'Jest', 'pytest'"
+      containerisation:
+        type: string
+        description: "Container tooling, e.g. 'Docker + docker-compose'"
+  apiDesign:
+    type: object
+    required:
+      - style
+      - endpoints
+    properties:
+      style:
+        type: string
+        enum: [REST, GraphQL, gRPC, tRPC, none]
+        description: "API paradigm"
+      baseUrl:
+        type: string
+        description: "Base path, e.g. '/api/v1'"
+      authScheme:
+        type: string
+        description: "Authentication mechanism, e.g. 'JWT Bearer', 'API Key', 'OAuth2'"
+      endpoints:
+        type: array
+        description: "Key API endpoints"
+        items:
+          type: object
+          required:
+            - method
+            - path
+            - description
+          properties:
+            method:
+              type: string
+              enum: [GET, POST, PUT, PATCH, DELETE, QUERY, MUTATION, SUBSCRIPTION]
+            path:
+              type: string
+            description:
+              type: string
+            auth:
+              type: boolean
+  dataModel:
+    type: array
+    description: "Core entities and their key attributes"
+    items:
+      type: object
+      required:
+        - entity
+        - description
+        - keyAttributes
+      properties:
+        entity:
+          type: string
+          description: "Entity name, e.g. 'User'"
+        description:
+          type: string
+          description: "What this entity represents"
+        keyAttributes:
+          type: array
+          items:
+            type: string
+          description: "Most important fields, e.g. ['id', 'email', 'createdAt']"
+        relationships:
+          type: array
+          items:
+            type: string
+          description: "Relationships to other entities, e.g. ['User has many Posts']"
+  deploymentTopology:
+    type: object
+    required:
+      - environment
+      - strategy
+      - components
+    properties:
+      environment:
+        type: string
+        description: "Target environment: local, cloud-managed, self-hosted, hybrid"
+      strategy:
+        type: string
+        description: "Deployment approach: containers, serverless, PaaS, bare-metal"
+      components:
+        type: array
+        items:
+          type: object
+          required:
+            - name
+            - host
+          properties:
+            name:
+              type: string
+            host:
+              type: string
+              description: "Where it runs, e.g. 'Docker container', 'AWS Lambda', 'Vercel'"
+            scalingPolicy:
+              type: string
+  architectureDecisions:
+    type: array
+    description: "Lightweight ADRs — key decisions with context and consequences"
+    items:
+      type: object
+      required:
+        - title
+        - context
+        - decision
+        - consequences
+      properties:
+        title:
+          type: string
+          description: "Decision title, e.g. 'Use PostgreSQL over MongoDB'"
+        context:
+          type: string
+          description: "Why this decision was needed"
+        decision:
+          type: string
+          description: "What was decided and why"
+        consequences:
+          type: array
+          items:
+            type: string
+          description: "Trade-offs — positive and negative"
+    minItems: 1

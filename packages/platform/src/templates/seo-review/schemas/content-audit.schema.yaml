@@ -1,0 +1,34 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Content Audit
+description: E-E-A-T and content quality assessment
+type: object
+required: [summary, eatScore, pages]
+properties:
+  summary:
+    type: string
+  eatScore:
+    type: object
+    required: [experience, expertise, authoritativeness, trustworthiness]
+    properties:
+      experience: { type: integer, minimum: 1, maximum: 5 }
+      expertise: { type: integer, minimum: 1, maximum: 5 }
+      authoritativeness: { type: integer, minimum: 1, maximum: 5 }
+      trustworthiness: { type: integer, minimum: 1, maximum: 5 }
+  pages:
+    type: array
+    items:
+      type: object
+      required: [url, status, issues]
+      properties:
+        url: { type: string }
+        wordCount: { type: integer }
+        readabilityScore: { type: string }
+        status:
+          type: string
+          enum: [strong, needs-improvement, thin, outdated, duplicate]
+        issues:
+          type: array
+          items: { type: string }
+        recommendations:
+          type: array
+          items: { type: string }

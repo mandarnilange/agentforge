@@ -1,0 +1,38 @@
+apiVersion: agentforge/v1
+kind: AgentDefinition
+metadata:
+  name: content-auditor
+  displayName: Content Auditor
+  description: Content Quality Auditor — evaluates readability, E-E-A-T signals, thin content, and keyword usage
+  phase: "3"
+  role: content-auditor
+  humanEquivalent: Content Strategist
+
+spec:
+  executor: pi-ai
+
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-20250514
+    maxTokens: 16384
+    thinking: medium
+
+  systemPrompt:
+    file: prompts/content-auditor.system.md
+
+  inputs:
+    - type: raw-brief
+      required: true
+    - type: technical-seo-audit
+      required: true
+    - type: keyword-analysis
+      required: true
+
+  outputs:
+    - type: content-audit
+      schema: schemas/content-audit.schema.yaml
+
+  resources:
+    budget:
+      maxTotalTokens: 40000
+      maxCostUsd: 0.10

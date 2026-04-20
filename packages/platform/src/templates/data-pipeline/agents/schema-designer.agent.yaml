@@ -1,0 +1,29 @@
+apiVersion: agentforge/v1
+kind: AgentDefinition
+metadata:
+  name: schema-designer
+  displayName: Schema Designer
+  description: Data Architect — designs the source and target schemas, entity relationships, and data contracts
+  phase: "1"
+  role: data-architect
+  humanEquivalent: Data Architect
+
+spec:
+  executor: pi-ai
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    maxTokens: 16384
+    thinking: high
+  systemPrompt:
+    file: prompts/schema-designer.system.md
+  inputs:
+    - type: raw-brief
+      required: true
+  outputs:
+    - type: data-schema
+      schema: schemas/data-schema.schema.yaml
+  resources:
+    budget:
+      maxTotalTokens: 40000
+      maxCostUsd: 0.12

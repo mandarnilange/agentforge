@@ -1,0 +1,125 @@
+apiVersion: agentforge/v1
+kind: AgentDefinition
+metadata:
+  name: test-generator
+  displayName: Test Generator
+  description: QA Engineer — generates comprehensive API test suites with automated run-fix loop
+  phase: "2"
+  role: qa-engineer
+  humanEquivalent: QA Engineer
+
+spec:
+  executor: pi-coding-agent
+
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-20250514
+    maxTokens: 32768
+    thinking: high
+
+  systemPrompt:
+    file: prompts/test-generator.system.md
+
+  tools:
+    - read
+    - write
+    - edit
+    - bash
+    - grep
+    - find
+
+  inputs:
+    - type: api-spec
+      required: true
+
+  outputs:
+    - type: test-suite
+      schema: schemas/test-suite.schema.yaml
+
+  definitions:
+    setup-test-env:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        mkdir -p tests/{unit,integration,e2e}
+        echo "Test environment ready"
+      description: Prepare test directory structure
+      continueOnError: true
+
+    generate-tests:
+      type: llm
+      instructions: |
+        Generate a comprehensive test suite for the API spec.
+        Cover: happy paths, error cases, auth, validation, edge cases, and contract tests.
+
+    install-test-deps:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        if [ -f package.json ]; then
+          npm install 2>&1
+        fi
+      description: Install test dependencies
+      continueOnError: true
+
+    run-tests:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        npm test 2>&1
+      description: Run the generated test suite
+      continueOnError: true
+      captureOutput: true
+
+    test-gate:
+      type: script
+      run: |
+        if [ "{{steps.run-tests.exitCode}}" = "0" ]; then echo "PASS"; else echo "false"; fi
+      continueOnError: true
+
+    needs-fix:
+      type: script
+      run: |
+        if [ "{{steps.run-tests.exitCode}}" = "0" ]; then echo "false"; else echo "fix"; fi
+      continueOnError: true
+
+    fix-tests:
+      type: llm
+      instructions: |
+        Fix attempt {{loop.iteration}} of {{loop.maxIterations}}.
+        Test failures:
+        {{steps.run-tests.output}}
+        Fix the test setup or assertions. Only modify source if the API contract is wrong.
+
+    validate-output:
+      type: validate
+      schema: test-suite
+      description: Validate test-suite artifact against schema
+      continueOnError: true
+
+  flow:
+    - step: setup-test-env
+    - step: generate-tests
+    - step: install-test-deps
+    - loop:
+        until: "{{steps.test-gate.output}}"
+        maxIterations: 3
+        do:
+          - step: run-tests
+          - step: test-gate
+          - step: needs-fix
+          - step: fix-tests
+            condition: "{{steps.needs-fix.output}}"
+    - step: validate-output
+
+  nodeAffinity:
+    preferred:
+      - capability: docker
+
+  resources:
+    budget:
+      maxTotalTokens: 100000
+      maxCostUsd: 0.50
+    # Coding agents do iterative work; give them a longer wall-clock budget.
+    # Overrides AGENTFORGE_LLM_TIMEOUT_SECONDS (default 600s). Set to 0 to disable.
+    timeoutSeconds: 1200

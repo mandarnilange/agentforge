@@ -1,0 +1,47 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Published Content
+description: SEO-optimised article ready for publication with full metadata
+type: object
+required: [title, metaDescription, content, wordCount, seoMetadata]
+properties:
+  title: { type: string }
+  metaDescription: { type: string }
+  content:
+    type: string
+    description: "Final SEO-optimised article in markdown format"
+  wordCount: { type: integer, minimum: 0 }
+  seoMetadata:
+    type: object
+    required: [primaryKeyword, slug]
+    properties:
+      primaryKeyword: { type: string }
+      secondaryKeywords:
+        type: array
+        items: { type: string }
+      slug: { type: string }
+      canonicalUrl: { type: string }
+      openGraph:
+        type: object
+        properties:
+          title: { type: string }
+          description: { type: string }
+          imageAlt: { type: string }
+  schemaMarkup:
+    type: object
+    description: "JSON-LD schema.org markup"
+  internalLinkOpportunities:
+    type: array
+    items:
+      type: object
+      required: [anchorText, suggestedDestination]
+      properties:
+        anchorText: { type: string }
+        suggestedDestination: { type: string }
+  imageAltSuggestions:
+    type: array
+    items:
+      type: object
+      required: [imagePlaceholder, altText]
+      properties:
+        imagePlaceholder: { type: string }
+        altText: { type: string }

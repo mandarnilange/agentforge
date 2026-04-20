@@ -1,0 +1,8 @@
+{
+	"name": "data-pipeline",
+	"displayName": "Data Pipeline",
+	"description": "5-agent data engineering pipeline: Schema Designer → ETL Builder → Validator → Transformer → Loader. Cloud-native with ECS node support.",
+	"tags": ["data", "etl", "pipeline", "cloud", "ecs"],
+	"agents": 5,
+	"executor": "mixed"
+}

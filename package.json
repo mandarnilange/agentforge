@@ -1,0 +1,41 @@
+{
+	"name": "agentforge-monorepo",
+	"version": "0.2.0",
+	"private": true,
+	"description": "AgentForge — Kubernetes for AI agent workflows",
+	"type": "module",
+	"workspaces": [
+		"packages/core",
+		"packages/platform"
+	],
+	"scripts": {
+		"build:dashboard": "cd packages/core/src/dashboard/app && npm install --no-audit --no-fund && npm run build",
+		"build:ts": "tsc --build",
+		"build:assets": "node scripts/copy-build-assets.mjs",
+		"build": "npm run build:dashboard && npm run build:ts && npm run build:assets",
+		"dev": "tsx packages/core/src/cli/index.ts",
+		"start": "tsx packages/core/src/cli/index.ts",
+		"pretest": "npm run build:dashboard",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"lint": "biome check --write .",
+		"typecheck": "tsc --build",
+		"clean": "rm -rf packages/core/dist packages/core/tsconfig.tsbuildinfo packages/core/src/dashboard/dist packages/platform/dist packages/platform/tsconfig.tsbuildinfo"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	},
+	"license": "MIT",
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.10",
+		"@types/better-sqlite3": "^7.6.13",
+		"@types/dockerode": "^4.0.1",
+		"@types/node": "^25.5.2",
+		"@types/pdfkit": "^0.17.5",
+		"@types/pg": "^8.20.0",
+		"@vitest/coverage-v8": "^4.1.4",
+		"tsx": "^4.21.0",
+		"typescript": "^6.0.2",
+		"vitest": "^4.1.2"
+	}
+}

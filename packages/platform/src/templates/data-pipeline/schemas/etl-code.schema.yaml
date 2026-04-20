@@ -1,0 +1,36 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: ETL Code
+description: Summary of generated ETL pipeline code
+type: object
+required: [summary, language, filesGenerated, testResults]
+properties:
+  summary: { type: string }
+  language: { type: string }
+  framework: { type: string }
+  filesGenerated:
+    type: array
+    items:
+      type: object
+      required: [path, component]
+      properties:
+        path: { type: string }
+        component:
+          type: string
+          enum: [extract, transform, load, test, config, utils]
+        description: { type: string }
+  testResults:
+    type: object
+    required: [passed, failed, status]
+    properties:
+      passed: { type: integer, minimum: 0 }
+      failed: { type: integer, minimum: 0 }
+      status:
+        type: string
+        enum: [all-passed, some-failed, no-tests, error]
+  recordCounts:
+    type: object
+    properties:
+      extracted: { type: integer, minimum: 0 }
+      transformed: { type: integer, minimum: 0 }
+      loaded: { type: integer, minimum: 0 }
+      failed: { type: integer, minimum: 0 }

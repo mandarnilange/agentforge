@@ -1,0 +1,35 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Quality Findings
+description: Code quality review findings with severity ratings
+type: object
+required: [summary, findings, overallAssessment]
+properties:
+  summary: { type: string }
+  findings:
+    type: array
+    items:
+      type: object
+      required: [severity, file, description, recommendation]
+      properties:
+        severity:
+          type: string
+          enum: [critical, major, minor, nitpick]
+        file: { type: string }
+        line: { type: integer }
+        category:
+          type: string
+          enum: [design, correctness, error-handling, performance, testing, maintainability]
+        description: { type: string }
+        recommendation: { type: string }
+  overallAssessment:
+    type: string
+    enum: [approve, approve-with-suggestions, requires-changes, reject]
+  staticAnalysisFindings:
+    type: array
+    items:
+      type: object
+      properties:
+        tool: { type: string }
+        rule: { type: string }
+        file: { type: string }
+        description: { type: string }

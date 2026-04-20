@@ -1,0 +1,77 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Code Output
+description: Summary of generated code including files produced, test results, and build status
+type: object
+required:
+  - summary
+  - filesGenerated
+  - testResults
+  - buildStatus
+properties:
+  summary:
+    type: string
+    description: "2-3 sentence summary of what was built and any notable decisions made during implementation"
+  filesGenerated:
+    type: array
+    description: "List of files created or modified"
+    items:
+      type: object
+      required:
+        - path
+        - purpose
+      properties:
+        path:
+          type: string
+          description: "Relative file path, e.g. 'src/routes/users.ts'"
+        purpose:
+          type: string
+          description: "What this file does, e.g. 'REST handlers for user CRUD operations'"
+        linesOfCode:
+          type: integer
+    minItems: 1
+  testResults:
+    type: object
+    required:
+      - passed
+      - failed
+      - status
+    properties:
+      passed:
+        type: integer
+        description: "Number of tests that passed"
+      failed:
+        type: integer
+        description: "Number of tests that failed"
+      status:
+        type: string
+        enum: [all-passed, some-failed, no-tests, error]
+      coverage:
+        type: number
+        description: "Code coverage percentage if available"
+      notes:
+        type: string
+        description: "Any notable test failures or coverage gaps"
+  buildStatus:
+    type: string
+    enum: [success, warning, failed]
+    description: "Overall build status after lint, format, and test"
+  dependencies:
+    type: array
+    description: "Key dependencies added"
+    items:
+      type: object
+      required:
+        - name
+        - version
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        purpose:
+          type: string
+  knownIssues:
+    type: array
+    description: "Known limitations or items left for follow-up"
+    items:
+      type: string

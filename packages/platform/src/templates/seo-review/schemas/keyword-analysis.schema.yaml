@@ -1,0 +1,45 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Keyword Analysis
+description: Keyword gap analysis and search intent mapping
+type: object
+required: [summary, keywordClusters, contentGaps, cannibalisation]
+properties:
+  summary:
+    type: string
+  keywordClusters:
+    type: array
+    items:
+      type: object
+      required: [primaryKeyword, intent, currentPage, status]
+      properties:
+        primaryKeyword: { type: string }
+        secondaryKeywords:
+          type: array
+          items: { type: string }
+        intent:
+          type: string
+          enum: [informational, navigational, commercial, transactional]
+        currentPage: { type: string }
+        status:
+          type: string
+          enum: [well-targeted, needs-optimisation, missing-page, cannibalised]
+  contentGaps:
+    type: array
+    items:
+      type: object
+      required: [keyword, intent, opportunity]
+      properties:
+        keyword: { type: string }
+        intent: { type: string }
+        opportunity: { type: string }
+  cannibalisation:
+    type: array
+    items:
+      type: object
+      required: [keyword, recommendation]
+      properties:
+        keyword: { type: string }
+        competingUrls:
+          type: array
+          items: { type: string }
+        recommendation: { type: string }

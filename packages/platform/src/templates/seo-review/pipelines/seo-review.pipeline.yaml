@@ -1,0 +1,64 @@
+apiVersion: agentforge/v1
+kind: PipelineDefinition
+metadata:
+  name: seo-review
+  displayName: SEO Review Pipeline
+  description: Technical Audit → Keyword Analysis → Content Audit → Action Plan. Each phase builds on the previous.
+
+spec:
+  input:
+    - name: brief
+      type: raw-brief
+      description: |
+        Site URL(s), target audience, primary keywords, competitors, and any specific concerns.
+        Include page content or crawl data if available.
+      required: true
+
+  phases:
+    - name: technical-audit
+      phase: 1
+      agents:
+        - crawler-analyst
+
+    - name: keyword-analysis
+      phase: 2
+      agents:
+        - keyword-analyst
+
+    - name: content-audit
+      phase: 3
+      agents:
+        - content-auditor
+      gate:
+        required: true
+        approvers:
+          minCount: 1
+          roles: [admin, reviewer]
+
+    - name: strategy
+      phase: 4
+      agents:
+        - seo-strategist
+
+  gateDefaults:
+    actions:
+      - approve
+      - reject
+      - request-revision
+    timeout: 48h
+
+  wiring:
+    keyword-analyst:
+      technical-seo-audit: crawler-analyst
+    content-auditor:
+      technical-seo-audit: crawler-analyst
+      keyword-analysis: keyword-analyst
+    seo-strategist:
+      technical-seo-audit: crawler-analyst
+      keyword-analysis: keyword-analyst
+      content-audit: content-auditor
+
+  retryPolicy:
+    maxRetries: 1
+    backoff: linear
+    initialDelay: 15s

@@ -1,0 +1,102 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Requirements
+description: Structured requirements document with epics, user stories, and acceptance criteria
+type: object
+required:
+  - projectName
+  - description
+  - goals
+  - epics
+  - constraints
+properties:
+  projectName:
+    type: string
+    description: "Name of the project, e.g. 'Task Manager API'"
+  description:
+    type: string
+    description: "One-paragraph summary of what is being built and why"
+  goals:
+    type: array
+    description: "Business goals this project achieves, e.g. 'Reduce manual effort by 50%'"
+    items:
+      type: string
+    minItems: 1
+  epics:
+    type: array
+    description: "Major feature areas, each broken down into user stories"
+    items:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - stories
+      properties:
+        id:
+          type: string
+          description: "Epic identifier, e.g. 'E1'"
+        title:
+          type: string
+          description: "Short epic title, e.g. 'User Authentication'"
+        description:
+          type: string
+          description: "What this epic covers and why it matters"
+        stories:
+          type: array
+          description: "User stories within this epic"
+          items:
+            type: object
+            required:
+              - id
+              - title
+              - asA
+              - iWant
+              - soThat
+              - acceptanceCriteria
+            properties:
+              id:
+                type: string
+                description: "Story identifier, e.g. 'E1-S1'"
+              title:
+                type: string
+                description: "Short story title"
+              asA:
+                type: string
+                description: "The persona, e.g. 'registered user'"
+              iWant:
+                type: string
+                description: "The capability, e.g. 'to log in with email and password'"
+              soThat:
+                type: string
+                description: "The benefit, e.g. 'I can access my account securely'"
+              acceptanceCriteria:
+                type: array
+                description: "Testable criteria that define done for this story"
+                items:
+                  type: string
+                minItems: 2
+              priority:
+                type: string
+                enum: [must-have, should-have, nice-to-have]
+                description: "MoSCoW priority"
+          minItems: 1
+    minItems: 1
+  constraints:
+    type: array
+    description: "Technical, business, or compliance constraints the solution must respect"
+    items:
+      type: object
+      required:
+        - type
+        - description
+      properties:
+        type:
+          type: string
+          enum: [technical, business, compliance, performance, security]
+        description:
+          type: string
+  openQuestions:
+    type: array
+    description: "Ambiguities or missing information that need stakeholder clarification"
+    items:
+      type: string

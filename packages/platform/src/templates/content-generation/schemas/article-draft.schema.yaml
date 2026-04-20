@@ -1,0 +1,22 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Article Draft
+description: Complete article draft with full content and quality score
+type: object
+required: [title, content, wordCount, qualityScore]
+properties:
+  title: { type: string }
+  content:
+    type: string
+    description: "Full article in markdown format"
+  wordCount: { type: integer }
+  qualityScore:
+    type: integer
+    minimum: 1
+    maximum: 10
+    description: "Self-review quality score — 8+ means approved"
+  revisionsApplied:
+    type: integer
+    description: "Number of self-review revision cycles completed"
+  outlineCoverage:
+    type: string
+    description: "Notes on any outline sections not fully covered"

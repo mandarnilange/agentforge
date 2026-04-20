@@ -1,0 +1,34 @@
+apiVersion: agentforge/v1
+kind: AgentDefinition
+metadata:
+  name: architect
+  displayName: Architect
+  description: Software Architect — designs system components, tech stack, API surface, and deployment topology
+  phase: "2"
+  role: architect
+  humanEquivalent: Software Architect
+
+spec:
+  executor: pi-ai
+
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-20250514
+    maxTokens: 16384
+    thinking: high
+
+  systemPrompt:
+    file: prompts/architect.system.md
+
+  inputs:
+    - type: requirements
+      required: true
+
+  outputs:
+    - type: architecture-plan
+      schema: schemas/architecture-plan.schema.yaml
+
+  resources:
+    budget:
+      maxTotalTokens: 50000
+      maxCostUsd: 0.15

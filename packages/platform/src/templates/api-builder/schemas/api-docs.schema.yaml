@@ -1,0 +1,40 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: API Docs
+description: Complete API documentation including reference, guides, and Postman collection
+type: object
+required: [title, gettingStarted, authentication, endpoints]
+properties:
+  title:
+    type: string
+  gettingStarted:
+    type: string
+    description: "Markdown — setup and first API call guide"
+  authentication:
+    type: string
+    description: "Markdown — how to authenticate"
+  endpoints:
+    type: array
+    items:
+      type: object
+      required: [method, path, description, curlExample]
+      properties:
+        method:
+          type: string
+          enum: [GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS]
+        path: { type: string }
+        description: { type: string }
+        requestExample: { type: string }
+        responseExample: { type: string }
+        curlExample: { type: string }
+  postmanCollection:
+    type: object
+    description: "Postman collection JSON"
+  environmentVariables:
+    type: array
+    items:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        required: { type: boolean }

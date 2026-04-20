@@ -1,0 +1,85 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Data Schema
+description: Source schema, target schema, transformation contracts, and quality rules
+type: object
+required: [summary, sourceSchema, targetSchema, transformationContracts, qualityRules, deploymentContext]
+properties:
+  summary: { type: string }
+  sourceSchema:
+    type: object
+    required: [format, fields]
+    properties:
+      format:
+        type: string
+        enum: [csv, json, parquet, database, api, event-stream, files]
+      location: { type: string }
+      fields:
+        type: array
+        items:
+          type: object
+          required: [name, type, nullable]
+          properties:
+            name: { type: string }
+            type: { type: string }
+            nullable: { type: boolean }
+            description: { type: string }
+            knownIssues: { type: string }
+  targetSchema:
+    type: object
+    required: [store, fields]
+    properties:
+      store: { type: string }
+      database: { type: string }
+      table: { type: string }
+      partitionBy: { type: string }
+      fields:
+        type: array
+        items:
+          type: object
+          required: [name, type, nullable]
+          properties:
+            name: { type: string }
+            type: { type: string }
+            nullable: { type: boolean }
+            primaryKey: { type: boolean }
+            indexed: { type: boolean }
+            description: { type: string }
+  transformationContracts:
+    type: array
+    items:
+      type: object
+      required: [sourceField, targetField, transformation]
+      properties:
+        sourceField: { type: string }
+        targetField: { type: string }
+        transformation:
+          type: string
+          enum: [direct, type-cast, derived, default, lookup, calculated]
+        logic: { type: string }
+        defaultValue:
+          description: "Default when source is null or missing; any JSON scalar/array/object accepted"
+          type: [string, number, integer, boolean, array, object, "null"]
+  qualityRules:
+    type: array
+    items:
+      type: object
+      required: [field, rule, description]
+      properties:
+        field: { type: string }
+        rule:
+          type: string
+          enum: [not-null, range, enum, unique, referential-integrity, business-rule, regex]
+        description: { type: string }
+        params: {}
+  deploymentContext:
+    type: object
+    required: [cloudProvider, targetStore, volume, freshness]
+    properties:
+      cloudProvider:
+        type: string
+        enum: [aws, gcp, azure, on-premise, any]
+      targetStore: { type: string }
+      volume: { type: string }
+      freshness:
+        type: string
+        enum: [real-time, hourly, daily, weekly, on-demand]

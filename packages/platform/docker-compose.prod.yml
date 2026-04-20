@@ -1,0 +1,100 @@
+## Production deployment: control plane + workers + observability
+## Usage: docker compose -f docker-compose.prod.yml up -d
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: agentforge
+      POSTGRES_USER: agentforge
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agentforge_secret}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentforge -d agentforge"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Control Plane (Dashboard + API) ────────────────────────────────────────
+  control-plane:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: platform
+    command: dashboard
+    ports:
+      - "${PORT:-3001}:${PORT:-3001}"
+    environment:
+      PORT: ${PORT:-3001}
+      AGENTFORGE_OUTPUT_DIR: /app/output
+      AGENTFORGE_STATE_STORE: postgres
+      AGENTFORGE_POSTGRES_URL: postgres://agentforge:${POSTGRES_PASSWORD:-agentforge_secret}@postgres:5432/agentforge
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+    volumes:
+      - output-data:/app/output
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:${PORT:-3001}/api/health').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ── Worker Node ────────────────────────────────────────────────────────────
+  worker:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: platform
+    command: worker
+    environment:
+      AGENTFORGE_OUTPUT_DIR: /app/output
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      CONTROL_PLANE_URL: http://control-plane:${PORT:-3001}
+    volumes:
+      - output-data:/app/output
+    depends_on:
+      control-plane:
+        condition: service_healthy
+    deploy:
+      replicas: ${WORKER_REPLICAS:-1}
+    restart: unless-stopped
+
+  # ── Jaeger (Distributed Tracing) ───────────────────────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:1.58
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4318:4318"     # OTLP HTTP
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    restart: unless-stopped
+
+  # ── Grafana (Dashboards) ───────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.0.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    depends_on:
+      - jaeger
+    restart: unless-stopped
+
+volumes:
+  pg-data:
+  output-data:
+  grafana-data:

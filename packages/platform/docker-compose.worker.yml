@@ -1,0 +1,25 @@
+## Worker node deployment (connects to remote control plane)
+## Deploy on execution hosts. Requires CONTROL_PLANE_URL.
+## Usage: CONTROL_PLANE_URL=http://cp-host:3001 docker compose -f docker-compose.worker.yml up -d
+
+services:
+  worker:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: platform
+    command: worker
+    environment:
+      AGENTFORGE_OUTPUT_DIR: /app/output
+      AGENTFORGE_NODE_SECRET: ${AGENTFORGE_NODE_SECRET:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      CONTROL_PLANE_URL: ${CONTROL_PLANE_URL}
+    volumes:
+      - worker-output:/app/output
+    deploy:
+      replicas: ${WORKER_REPLICAS:-1}
+    restart: unless-stopped
+
+volumes:
+  worker-output:

@@ -1,0 +1,50 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Content Outline
+description: Structured article outline with sections, key points, and metadata
+type: object
+required: [title, metaDescription, primaryKeyword, targetWordCount, hook, sections, conclusion]
+properties:
+  title:
+    type: string
+    description: "SEO title, max 60 chars"
+    maxLength: 60
+  metaDescription:
+    type: string
+    description: "Meta description, max 155 chars"
+    maxLength: 160
+  primaryKeyword: { type: string }
+  targetWordCount: { type: integer, minimum: 1 }
+  hook:
+    type: object
+    required: [type, text]
+    properties:
+      type:
+        type: string
+        enum: [statistic, question, bold-claim, story, problem-statement]
+      text: { type: string }
+  sections:
+    type: array
+    items:
+      type: object
+      required: [heading, level, purpose, keyPoints, wordCountTarget]
+      properties:
+        heading: { type: string }
+        level:
+          type: string
+          enum: [H2, H3]
+        purpose: { type: string }
+        keyPoints:
+          type: array
+          items: { type: string }
+          minItems: 2
+        wordCountTarget: { type: integer, minimum: 1 }
+        evidenceToUse:
+          type: array
+          items: { type: string }
+    minItems: 2
+  conclusion:
+    type: object
+    required: [summary, callToAction]
+    properties:
+      summary: { type: string }
+      callToAction: { type: string }

@@ -1,0 +1,31 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Technical SEO Audit
+description: Technical on-page SEO audit findings
+type: object
+required: [summary, score, findings]
+properties:
+  summary:
+    type: string
+    description: "2-3 sentence executive summary of technical SEO health"
+  score:
+    type: integer
+    minimum: 0
+    maximum: 100
+    description: "Overall technical SEO score"
+  findings:
+    type: array
+    items:
+      type: object
+      required: [category, issue, severity, recommendation]
+      properties:
+        category:
+          type: string
+          enum: [meta-tags, headings, structured-data, crawlability, page-speed, indexation, internal-links]
+        issue: { type: string }
+        affectedUrls:
+          type: array
+          items: { type: string }
+        severity:
+          type: string
+          enum: [critical, high, medium, low]
+        recommendation: { type: string }

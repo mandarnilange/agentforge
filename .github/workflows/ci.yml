@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint + format check
+        run: npx biome check .
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Single pipeline: dashboard SPA → tsc --build → copy template/SPA assets
+      # into dist/. Mirrors what npm publish's prepublishOnly runs, so CI catches
+      # any asset-copy or typecheck regression before the release workflow fires.
+      - name: Build
+        run: npm run build
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22']
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure git identity
+        # GitRepoManager tests call `git commit`; CI runners have no
+        # default user.name/email and the commit would fail.
+        run: |
+          git config --global user.email "ci@agentforge.local"
+          git config --global user.name "AgentForge CI"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Dashboard tests hit `/`, `/dashboard`, SPA fallback — they need
+      # packages/core/src/dashboard/dist/index.html on disk. The root
+      # `pretest` hook also does this; running it explicitly keeps the
+      # test log readable on failures.
+      - name: Build dashboard SPA
+        run: npm run build:dashboard
+
+      - name: Run tests
+        run: npx vitest run --reporter=dot
+        env:
+          CI: 'true'

@@ -1,0 +1,68 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Pipeline Deployment Config
+description: Cloud deployment configuration for the data pipeline
+type: object
+required: [summary, cloudProvider, deploymentStrategy, environmentVariables, schedule]
+properties:
+  summary: { type: string }
+  cloudProvider:
+    type: string
+    enum: [aws, gcp, azure, kubernetes, on-premise]
+  deploymentStrategy:
+    type: string
+    enum: [ecs-task, cloud-run, container-app, kubernetes-cronjob, lambda, cloud-function]
+  containerConfig:
+    type: object
+    properties:
+      image: { type: string }
+      cpu: { type: string }
+      memory: { type: string }
+      dockerfile: { type: string }
+  environmentVariables:
+    type: array
+    items:
+      type: object
+      required: [name, description, required]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        required: { type: boolean }
+        source:
+          type: string
+          enum: [secrets-manager, parameter-store, env-file, hardcoded-safe]
+  schedule:
+    type: object
+    required: [type]
+    properties:
+      type:
+        type: string
+        enum: [cron, event-driven, manual, streaming]
+      cronExpression: { type: string }
+      trigger: { type: string }
+  alerting:
+    type: array
+    items:
+      type: object
+      required: [condition, channel]
+      properties:
+        condition: { type: string }
+        channel: { type: string }
+  runbook:
+    type: string
+    description: "Markdown — operational runbook for this pipeline"
+  iamConfig:
+    type: object
+    description: "Required IAM roles and permissions"
+    properties:
+      roles:
+        type: array
+        description: "List of required IAM roles"
+        items: { type: string }
+      permissions:
+        type: array
+        description: "List of required permissions"
+        items: { type: string }
+      policies:
+        type: array
+        description: "Attached policy names or ARNs"
+        items: { type: string }

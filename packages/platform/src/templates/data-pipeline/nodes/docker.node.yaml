@@ -1,0 +1,13 @@
+apiVersion: agentforge/v1
+kind: NodeDefinition
+metadata:
+  name: docker-runner
+  displayName: Docker Runner
+spec:
+  type: docker
+  capabilities: [docker, git, llm-access]
+  image: python:3.12-slim
+  resources:
+    maxConcurrentAgents: 4
+    memory: 4g
+    cpu: "4"

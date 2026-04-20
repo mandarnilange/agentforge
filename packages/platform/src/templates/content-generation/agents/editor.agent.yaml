@@ -1,0 +1,36 @@
+apiVersion: agentforge/v1
+kind: AgentDefinition
+metadata:
+  name: editor
+  displayName: Editor
+  description: Senior Editor — reviews and improves the draft for clarity, flow, accuracy, and style
+  phase: "4"
+  role: editor
+  humanEquivalent: Senior Editor
+
+spec:
+  executor: pi-ai
+
+  model:
+    provider: anthropic
+    name: claude-sonnet-4-20250514
+    maxTokens: 16384
+    thinking: medium
+
+  systemPrompt:
+    file: prompts/editor.system.md
+
+  inputs:
+    - type: article-draft
+      required: true
+    - type: raw-brief
+      required: true
+
+  outputs:
+    - type: edited-content
+      schema: schemas/edited-content.schema.yaml
+
+  resources:
+    budget:
+      maxTotalTokens: 40000
+      maxCostUsd: 0.12

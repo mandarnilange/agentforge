@@ -1,0 +1,57 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: SEO Action Plan
+description: Prioritised SEO action plan with quick wins and strategic initiatives
+type: object
+required: [summary, verdict, quickWins, strategicInitiatives, contentRoadmap]
+properties:
+  summary:
+    type: string
+    description: "Executive summary of SEO health and top priorities"
+  verdict:
+    type: string
+    enum: [critical-issues, needs-work, good-foundation, strong]
+  quickWins:
+    type: array
+    description: "High impact, low effort — complete in week 1"
+    items:
+      type: object
+      required: [action, impact, effort, owner]
+      properties:
+        action: { type: string }
+        impact:
+          type: string
+          enum: [high, medium, low]
+        effort:
+          type: string
+          enum: [hours, days, weeks]
+        owner:
+          type: string
+          enum: [developer, content-writer, seo-manager]
+        affectedUrl: { type: string }
+  strategicInitiatives:
+    type: array
+    description: "High impact, higher effort — plan for next month"
+    items:
+      type: object
+      required: [initiative, rationale, estimatedImpact]
+      properties:
+        initiative: { type: string }
+        rationale: { type: string }
+        estimatedImpact: { type: string }
+        timeframe: { type: string }
+  contentRoadmap:
+    type: array
+    description: "New content to create and existing content to update"
+    items:
+      type: object
+      required: [type, title, targetKeyword, priority]
+      properties:
+        type:
+          type: string
+          enum: [new-page, update-existing, consolidate]
+        title: { type: string }
+        targetKeyword: { type: string }
+        currentUrl: { type: string }
+        priority:
+          type: string
+          enum: [high, medium, low]

@@ -1,0 +1,14 @@
+apiVersion: agentforge/v1
+kind: NodeDefinition
+metadata:
+  name: local
+  displayName: Local Node
+  description: Runs agents on the local machine — no additional setup required
+
+spec:
+  type: local
+  capabilities:
+    - git
+    - llm-access
+  resources:
+    maxConcurrentAgents: 2

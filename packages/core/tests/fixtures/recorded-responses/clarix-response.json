@@ -1,0 +1,349 @@
+{
+	"artifacts": {
+		"frd": {
+			"projectName": "FreelanceFlow",
+			"version": "1.0",
+			"epics": [
+				{
+					"id": "E1",
+					"title": "User Authentication",
+					"description": "User registration and login functionality",
+					"userStories": [
+						{
+							"id": "US-1.1",
+							"title": "Email Registration",
+							"asA": "freelancer",
+							"iWant": "to register with my email address",
+							"soThat": "I can create an account and start invoicing",
+							"acceptanceCriteria": [
+								"User can enter email, password, and name",
+								"Email validation prevents invalid formats",
+								"Password must be at least 8 characters with one number",
+								"Confirmation email sent after registration"
+							],
+							"priority": "must-have"
+						},
+						{
+							"id": "US-1.2",
+							"title": "Google OAuth Login",
+							"asA": "freelancer",
+							"iWant": "to sign in with my Google account",
+							"soThat": "I can access the platform without creating another password",
+							"acceptanceCriteria": [
+								"Google OAuth 2.0 button on login page",
+								"Auto-creates account if first login",
+								"Links to existing account if email matches"
+							],
+							"priority": "must-have"
+						}
+					]
+				},
+				{
+					"id": "E2",
+					"title": "Invoice Management",
+					"description": "Core invoicing functionality",
+					"userStories": [
+						{
+							"id": "US-2.1",
+							"title": "Create Invoice",
+							"asA": "freelancer",
+							"iWant": "to create a new invoice with line items",
+							"soThat": "I can bill my clients for work completed",
+							"acceptanceCriteria": [
+								"Can add multiple line items with description, quantity, rate",
+								"Tax calculation with configurable tax rates",
+								"Discount support (percentage or fixed amount)",
+								"Auto-calculates subtotal, tax, and total"
+							],
+							"priority": "must-have"
+						}
+					]
+				}
+			],
+			"businessRules": [
+				"Invoice numbers must be unique and sequential per user",
+				"Invoices cannot be edited after being sent",
+				"Partial payments must track remaining balance"
+			],
+			"assumptions": [
+				"Users have a valid email address",
+				"Payment processing is handled by a third-party provider (Stripe)"
+			],
+			"constraints": [
+				"Must comply with GDPR for EU users",
+				"Must support WCAG 2.1 AA accessibility"
+			],
+			"outOfScope": [
+				"Native mobile apps (web-responsive only for MVP)",
+				"Multi-language support (English only for MVP)"
+			]
+		},
+		"nfr": {
+			"performance": {
+				"responseTime": "API response time < 200ms at p95 under 1000 concurrent users",
+				"throughput": "System handles 100 invoice creations per minute",
+				"concurrentUsers": 10000
+			},
+			"security": {
+				"authentication": "OAuth 2.0 + JWT tokens with 15-minute expiry",
+				"dataEncryption": "AES-256 at rest, TLS 1.3 in transit",
+				"compliance": "OWASP Top 10 compliance"
+			},
+			"scalability": {
+				"horizontalScaling": "Stateless API servers behind load balancer",
+				"databaseScaling": "Read replicas for reporting queries",
+				"targetGrowth": "Support 10x user growth in first year"
+			},
+			"availability": {
+				"uptime": "99.9% uptime SLA",
+				"rpo": "1 hour RPO",
+				"rto": "4 hours RTO",
+				"backupStrategy": "Automated daily backups with 30-day retention"
+			},
+			"compliance": {
+				"gdpr": true,
+				"wcagLevel": "AA",
+				"dataResidency": "EU data stays in EU region"
+			},
+			"maintainability": {
+				"codeQuality": "Minimum 80% test coverage",
+				"documentation": "API documentation via OpenAPI 3.0",
+				"monitoring": "Structured logging with correlation IDs"
+			}
+		},
+		"tech-stack-recommendation": {
+			"recommendations": [
+				{
+					"category": "frontend",
+					"technology": "Next.js 14 with React",
+					"justification": "Matches client preference, excellent SSR support, great developer ecosystem",
+					"alternatives": ["Remix", "SvelteKit"]
+				},
+				{
+					"category": "backend",
+					"technology": "Node.js with Fastify",
+					"justification": "Same language as frontend (TypeScript), high performance, excellent ecosystem for API development",
+					"alternatives": ["Express", "NestJS"]
+				},
+				{
+					"category": "database",
+					"technology": "PostgreSQL 16",
+					"justification": "Client requirement, excellent for relational data (invoices, clients), JSONB for flexible fields",
+					"alternatives": ["MySQL"]
+				},
+				{
+					"category": "infrastructure",
+					"technology": "AWS (ECS + RDS + S3)",
+					"justification": "Cloud-native as required, EU region availability for GDPR, managed services reduce ops burden",
+					"alternatives": ["GCP Cloud Run", "Vercel + PlanetScale"]
+				}
+			]
+		},
+		"timeline": {
+			"phases": [
+				{
+					"name": "Foundation",
+					"startDate": "2026-04-14",
+					"endDate": "2026-05-09",
+					"milestones": [
+						"Project setup",
+						"Auth system",
+						"Database schema",
+						"CI/CD pipeline"
+					],
+					"dependencies": []
+				},
+				{
+					"name": "Core Features",
+					"startDate": "2026-05-12",
+					"endDate": "2026-06-06",
+					"milestones": ["Client management", "Invoice CRUD", "PDF generation"],
+					"dependencies": ["Foundation"]
+				},
+				{
+					"name": "Polish & Launch",
+					"startDate": "2026-06-09",
+					"endDate": "2026-07-04",
+					"milestones": [
+						"Dashboard analytics",
+						"Email delivery",
+						"Performance testing",
+						"Launch"
+					],
+					"dependencies": ["Core Features"]
+				}
+			]
+		},
+		"effort-estimate": {
+			"phases": [
+				{
+					"name": "Foundation",
+					"activities": [
+						{
+							"name": "Project setup & CI/CD",
+							"personDays": 3,
+							"roles": ["DevOps"]
+						},
+						{
+							"name": "Authentication system",
+							"personDays": 5,
+							"roles": ["Backend", "Frontend"]
+						},
+						{
+							"name": "Database schema & migrations",
+							"personDays": 3,
+							"roles": ["Backend"]
+						}
+					],
+					"totalPersonDays": 11
+				},
+				{
+					"name": "Core Features",
+					"activities": [
+						{
+							"name": "Client management",
+							"personDays": 5,
+							"roles": ["Backend", "Frontend"]
+						},
+						{
+							"name": "Invoice CRUD",
+							"personDays": 8,
+							"roles": ["Backend", "Frontend"]
+						},
+						{ "name": "PDF generation", "personDays": 4, "roles": ["Backend"] }
+					],
+					"totalPersonDays": 17
+				},
+				{
+					"name": "Polish & Launch",
+					"activities": [
+						{
+							"name": "Dashboard & analytics",
+							"personDays": 5,
+							"roles": ["Frontend", "Backend"]
+						},
+						{ "name": "Email delivery", "personDays": 3, "roles": ["Backend"] },
+						{ "name": "Testing & QA", "personDays": 5, "roles": ["QA"] }
+					],
+					"totalPersonDays": 13
+				}
+			],
+			"totalPersonDays": 41,
+			"contingencyPercent": 20
+		},
+		"project-proposal": {
+			"executiveSummary": "FreelanceFlow is a modern SaaS invoicing platform designed for freelancers and small agencies. The MVP delivers core invoicing, client management, and payment tracking in a 3-month timeline.",
+			"scope": {
+				"included": [
+					"User authentication",
+					"Client management",
+					"Invoice creation and tracking",
+					"PDF generation",
+					"Email delivery",
+					"Revenue dashboard"
+				],
+				"excluded": [
+					"Native mobile apps",
+					"Multi-language",
+					"Marketplace features"
+				]
+			},
+			"timeline": "12 weeks (April 14 - July 4, 2026)",
+			"estimatedCost": "41 person-days + 20% contingency = ~49 person-days",
+			"teamComposition": [
+				{ "role": "Full-stack Developer", "count": 2 },
+				{ "role": "DevOps Engineer", "count": 1 },
+				{ "role": "QA Engineer", "count": 1 }
+			],
+			"risks": [
+				"Payment provider integration complexity may exceed estimates",
+				"GDPR compliance requires legal review of data handling",
+				"PDF generation across currencies may have edge cases"
+			]
+		},
+		"wireframes": {
+			"screens": [
+				{
+					"name": "Dashboard",
+					"route": "/dashboard",
+					"description": "Main dashboard with revenue overview and recent invoices",
+					"components": [
+						{
+							"name": "RevenueCard",
+							"type": "card",
+							"description": "Shows total revenue, outstanding, overdue amounts"
+						},
+						{
+							"name": "RecentInvoices",
+							"type": "table",
+							"description": "List of last 10 invoices with status badges"
+						},
+						{
+							"name": "QuickActions",
+							"type": "button-group",
+							"description": "New Invoice, New Client shortcuts"
+						}
+					]
+				},
+				{
+					"name": "Invoice Editor",
+					"route": "/invoices/new",
+					"description": "Create/edit invoice with line items",
+					"components": [
+						{
+							"name": "ClientSelector",
+							"type": "combobox",
+							"description": "Search and select client"
+						},
+						{
+							"name": "LineItemsTable",
+							"type": "editable-table",
+							"description": "Add/remove line items with quantity and rate"
+						},
+						{
+							"name": "TotalsPanel",
+							"type": "panel",
+							"description": "Subtotal, tax, discount, total"
+						},
+						{
+							"name": "ActionBar",
+							"type": "toolbar",
+							"description": "Save Draft, Send, Preview PDF"
+						}
+					]
+				}
+			]
+		},
+		"design-tokens": {
+			"colors": {
+				"primary": { "50": "#eff6ff", "500": "#3b82f6", "900": "#1e3a5f" },
+				"success": { "500": "#22c55e" },
+				"warning": { "500": "#f59e0b" },
+				"error": { "500": "#ef4444" }
+			},
+			"typography": {
+				"fontFamily": "Inter, system-ui, sans-serif",
+				"fontSize": {
+					"xs": "12px",
+					"sm": "14px",
+					"base": "16px",
+					"lg": "18px",
+					"xl": "20px"
+				}
+			},
+			"spacing": {
+				"xs": "4px",
+				"sm": "8px",
+				"md": "16px",
+				"lg": "24px",
+				"xl": "32px"
+			},
+			"borderRadius": {
+				"sm": "4px",
+				"md": "8px",
+				"lg": "12px",
+				"full": "9999px"
+			}
+		}
+	}
+}

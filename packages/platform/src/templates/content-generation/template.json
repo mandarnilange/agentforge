@@ -1,0 +1,8 @@
+{
+	"name": "content-generation",
+	"displayName": "Content Generation",
+	"description": "5-agent content factory: Researcher → Outline Writer → Writer (with draft-revise loop) → Editor → SEO Optimizer. Produces publish-ready articles.",
+	"tags": ["content", "writing", "seo", "marketing"],
+	"agents": 5,
+	"executor": "mixed"
+}

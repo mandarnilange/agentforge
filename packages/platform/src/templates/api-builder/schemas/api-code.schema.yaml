@@ -1,0 +1,41 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: API Code
+description: Summary of generated API server code
+type: object
+required: [summary, framework, filesGenerated, testResults, buildStatus]
+properties:
+  summary:
+    type: string
+  framework:
+    type: string
+    description: "Framework used, e.g. 'Fastify + TypeScript'"
+  filesGenerated:
+    type: array
+    items:
+      type: object
+      required: [path, purpose]
+      properties:
+        path: { type: string }
+        purpose: { type: string }
+    minItems: 1
+  testResults:
+    type: object
+    required: [passed, failed, status]
+    properties:
+      passed: { type: integer, minimum: 0 }
+      failed: { type: integer, minimum: 0 }
+      status:
+        type: string
+        enum: [all-passed, some-failed, no-tests, error]
+      coverage: { type: number, minimum: 0, maximum: 100 }
+  buildStatus:
+    type: string
+    enum: [success, warning, failed]
+  dependencies:
+    type: array
+    items:
+      type: object
+      required: [name, version]
+      properties:
+        name: { type: string }
+        version: { type: string }

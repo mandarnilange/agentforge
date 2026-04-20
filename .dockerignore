@@ -1,0 +1,20 @@
+node_modules
+dist
+output
+.git
+coverage
+_archive
+.claude
+.agentforge/nodes
+packages/core/src/dashboard/app/node_modules
+packages/**/node_modules
+packages/**/dist
+
+# Drop editor/notes markdown at the repo root but keep template + source
+# markdown. `dist/templates/**/prompts/*.system.md` ship in the npm tarball
+# and must land in the Docker image too. So we exclude root-level .md and
+# then re-include the paths that need to build.
+*.md
+!README.md
+!packages/**/*.md
+!scripts/**/*.md
