@@ -13,6 +13,7 @@ AgentForge lets engineering teams define agents and pipelines the way Kubernetes
 - **Declarative YAML, not code.** Agents, pipelines, and nodes are data. Version-control them, diff them, generate them.
 - **Approval gates as first-class objects.** Phases pause until a human approves, rejects, or requests revision. No hand-rolled webhook plumbing.
 - **Typed artifacts, validated at every boundary.** Every agent declares its inputs and outputs as Zod / JSON Schemas. Malformed LLM output fails fast — it doesn't poison the next phase.
+- **Agents are mini-pipelines, not just prompts.** Each agent can interleave LLM calls, shell scripts, schema validation, and retry loops — wire in your linter, test runner, or security scanner and the LLM's output is checked against your tools on every run.
 - **Laptop-to-production same binary.** Start with SQLite and a single `ANTHROPIC_API_KEY`; flip env vars to unlock PostgreSQL, Docker isolation, OpenTelemetry tracing, multi-provider LLMs, and multi-node workers. No rewrite.
 
 ---
@@ -209,6 +210,111 @@ spec:
 ```
 
 More templates — `api-builder`, `code-review`, `content-generation`, `data-pipeline`, `seo-review` — ship with the platform binary. Catalog: [`docs/templates.md`](docs/templates.md).
+
+---
+
+## Agents are mini-pipelines — the harness model
+
+An agent isn't forced to be "one LLM call". Each agent can declare a **flow** of named steps — LLM calls, shell scripts, schema validation, transforms — and wrap them in conditionals and loops. The LLM produces code or content; your own tools validate it, your linter fixes it, your test runner verifies it, your security scanner flags it. Agents become a harness around the LLM, not a thin wrapper over it.
+
+### Step types
+
+| Type | What it does |
+|---|---|
+| `llm` | Invokes the agent's model with the system prompt + inputs. The normal LLM call. |
+| `script` | Runs a shell command on the node. Has access to template variables (`{{run.workdir}}`, `{{pipeline.id}}`, `{{steps.<name>.output}}`, `{{steps.<name>.exitCode}}`). |
+| `validate` | Runs a Zod / JSON Schema check against a named artifact or the last LLM output. Fails the run by default; set `continueOnError: true` to log and continue. |
+| `transform` | Pure data reshape between steps (no side effects). |
+
+Plus two control-flow constructs usable anywhere in a flow:
+
+- **`loop`** — retry a block until a predicate step outputs a success sentinel, with a `maxIterations` ceiling.
+- **`condition`** — skip a step when a referenced step's output doesn't match.
+
+### Real example — the bundled `developer` agent
+
+This is from `packages/core/src/templates/simple-sdlc/agents/developer.agent.yaml`. It shows the *generate → lint → test → fix-until-passing* pattern that `script` + `loop` unlock together:
+
+```yaml
+spec:
+  executor: pi-coding-agent
+  tools: [read, write, edit, bash, grep, find]
+
+  definitions:
+    generate-code:
+      type: llm
+      instructions: |
+        Generate the full implementation based on the requirements and architecture plan.
+
+    lint-and-format:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        # Auto-detect + run the project's linter/formatter
+        if   [ -f package.json  ]; then npx eslint src/ --fix; npx prettier --write "src/**/*.{ts,js}"
+        elif [ -f pyproject.toml ]; then python -m black .; python -m ruff check --fix .
+        elif [ -f go.mod        ]; then gofmt -w .
+        fi
+      continueOnError: true
+
+    run-tests:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        if   [ -f package.json  ]; then npm test
+        elif [ -f pyproject.toml ]; then python -m pytest -v
+        elif [ -f go.mod        ]; then go test ./...
+        fi
+      captureOutput: true
+      continueOnError: true
+
+    test-gate:
+      type: script
+      run: |
+        if [ "{{steps.run-tests.exitCode}}" = "0" ]; then echo "PASS"; else echo "false"; fi
+
+    fix-code:
+      type: llm
+      instructions: |
+        Fix attempt {{loop.iteration}} of {{loop.maxIterations}}.
+        Failing tests:
+        {{steps.run-tests.output}}
+        Fix the source code — don't modify tests unless they have a genuine bug.
+
+    validate-output:
+      type: validate
+      schema: code-output
+
+    git-commit:
+      type: script
+      run: |
+        cd {{run.workdir}}
+        git add -A && git commit -m "feat(developer): pipeline {{pipeline.id}}"
+      continueOnError: true
+
+  flow:
+    - step: generate-code
+    - step: lint-and-format
+    - loop:
+        until: "{{steps.test-gate.output}}"     # exits when test-gate emits "PASS"
+        maxIterations: 3
+        do:
+          - step: run-tests
+          - step: test-gate
+          - step: fix-code
+            condition: "{{steps.test-gate.output}}"   # skip fix if tests passed
+    - step: validate-output
+    - step: git-commit
+```
+
+### Why this matters
+
+- **Your existing tools stay in charge of correctness.** The LLM proposes; `eslint`, `pytest`, `go vet`, `trivy`, `semgrep`, whatever you already trust, decide whether it's acceptable. Bad LLM output doesn't leak into the next phase.
+- **Customize without forking.** Want a different linter, a stricter security scan, a different commit convention? It's YAML — edit the `run:` block. No framework recompile.
+- **Domain-agnostic.** The same mechanics build a content agent (generate → SEO audit → Grammarly → publish), a data agent (generate SQL → explain-plan → dry-run → apply), an ops agent (generate runbook → shellcheck → render to PDF). Scripts are the universal glue.
+- **Observable.** Every step — LLM and script — lands in the state store with output, exit code, duration, and a span in your OTel trace. The dashboard timeline shows the whole harness, not just the LLM turn.
+
+Deeper dive on step pipelines, template variables, and loop semantics: [`docs/architecture.md`](docs/architecture.md) and [`docs/pipeline-execution-flows.md`](docs/pipeline-execution-flows.md).
 
 ---
 
