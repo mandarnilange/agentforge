@@ -1,5 +1,7 @@
 # AgentForge Platform — Architecture Reference
 
+> Part of the [AgentForge documentation](README.md).
+>
 > Comprehensive architecture document for the Kubernetes-style AI agent orchestration platform.
 > Covers control plane, execution plane, communication, failure recovery, clean architecture,
 > deployment, and executor extensibility.

@@ -1,5 +1,7 @@
 # Getting Started with AgentForge
 
+> Part of the [AgentForge documentation](README.md).
+
 ## Table of Contents
 
 1. [Quick Start](#1-quick-start)
@@ -20,26 +22,26 @@
 ## 1. Quick Start
 
 ```bash
-# Install from npm
-npm install agentforge-core
+# Install from npm (pulls in agentforge-core transitively)
+npm install agentforge
 
 # Set your API key — grab one from https://console.anthropic.com/settings/keys
 export ANTHROPIC_API_KEY=sk-ant-your-key-here
 
 # Scaffold your .agentforge/ directory (agents, pipelines, schemas)
-npx agentforge-core init                            # blank template
-npx agentforge-core init --template simple-sdlc     # analyst → architect → developer starter
+npx agentforge init                            # blank template
+npx agentforge init --template simple-sdlc     # analyst → architect → developer starter
 
 # Start the dashboard
-npx agentforge-core dashboard
+npx agentforge dashboard
 
 # In another terminal: run a pipeline
-npx agentforge-core run --project my-saas --input "brief=Build a SaaS invoicing platform"
+npx agentforge run --project my-saas --input "brief=Build a SaaS invoicing platform"
 
 # Open http://localhost:3001/dashboard to watch progress
 ```
 
-> **Contributing / running from source?** Clone the repo, `npm ci`, then swap `npx agentforge-core` for `npx tsx packages/core/src/cli/index.ts` in any command below.
+> **Contributing / running from source?** Clone the repo, `npm ci`, then swap `npx agentforge` for `npx tsx packages/platform/src/platform-cli.ts` in any command below (or `npx agentforge` if you're on the core package).
 
 ---
 
@@ -57,9 +59,15 @@ npx agentforge-core run --project my-saas --input "brief=Build a SaaS invoicing 
 ### From npm (recommended)
 
 ```bash
-npm install agentforge-core
-# Optional: add enterprise extensions (Docker/remote executors, Postgres, OTel, multi-provider)
 npm install agentforge
+```
+
+`agentforge` depends on `agentforge-core`, so a single install gives you both. Defaults (SQLite, local executor, Anthropic) work with zero extra configuration.
+
+If you want the framework primitives without the platform binary or the multi-provider / Postgres / Docker executor extras, install core directly:
+
+```bash
+npm install agentforge-core
 ```
 
 ### From source
@@ -67,14 +75,15 @@ npm install agentforge
 ```bash
 git clone https://github.com/mandarnilange/agentforge && cd agentforge
 npm ci
+npm run build
 ```
 
 Verify the installation:
 
 ```bash
-npx agentforge-core --version    # prints version (from source: npx tsx packages/core/src/cli/index.ts --version)
-npx agentforge-core list         # lists all scaffolded agents
-# Installed `agentforge` too? Use `npx agentforge ...` for the full platform CLI (apply, node, multi-provider, etc).
+npx agentforge --version         # prints 0.2.0
+npx agentforge list              # lists scaffolded agents (after init)
+npx agentforge templates list    # lists bundled pipeline templates
 ```
 
 ### Initialize the project
@@ -82,8 +91,8 @@ npx agentforge-core list         # lists all scaffolded agents
 Scaffold the `.agentforge/` directory with agent, pipeline, and schema templates:
 
 ```bash
-npx agentforge-core init                             # blank template
-npx agentforge-core init --template simple-sdlc      # analyst → architect → developer
+npx agentforge init                             # blank template
+npx agentforge init --template simple-sdlc      # analyst → architect → developer
 ```
 
 This creates:
@@ -99,13 +108,13 @@ This creates:
 
 ```bash
 # Provide a project brief as inline text
-npx tsx packages/core/src/cli/index.ts run \
+npx agentforge run \
   --project my-app \
   --pipeline simple-sdlc \
   --input "brief=Build a task management app with user authentication"
 
 # Or provide a brief file
-npx tsx packages/core/src/cli/index.ts run \
+npx agentforge run \
   --project my-app \
   --input "brief=@path/to/brief.md"
 ```
@@ -117,7 +126,7 @@ The pipeline will:
 
 ### From Dashboard
 
-1. Start the dashboard: `npx tsx packages/core/src/cli/index.ts dashboard`
+1. Start the dashboard: `npx agentforge dashboard`
 2. Open http://localhost:3001/dashboard
 3. Click "New Pipeline"
 4. Fill in project name and brief
@@ -126,7 +135,7 @@ The pipeline will:
 ### Running a Single Agent
 
 ```bash
-npx tsx packages/core/src/cli/index.ts exec <agent-name> \
+npx agentforge exec <agent-name> \
   --input path/to/brief.md \
   --output ./output/<agent-name> \
   --verbose
@@ -160,7 +169,7 @@ Gates are human approval checkpoints between pipeline phases.
 ### Approve a gate (pipeline advances to next phase)
 
 ```bash
-npx tsx packages/core/src/cli/index.ts gate approve <gate-id> \
+npx agentforge gate approve <gate-id> \
   --reviewer "Alice" \
   --comment "Looks good, approved"
 ```
@@ -168,7 +177,7 @@ npx tsx packages/core/src/cli/index.ts gate approve <gate-id> \
 ### Reject a gate (pipeline fails)
 
 ```bash
-npx tsx packages/core/src/cli/index.ts gate reject <gate-id> \
+npx agentforge gate reject <gate-id> \
   --reviewer "Bob" \
   --comment "Architecture needs rework"
 ```
@@ -176,7 +185,7 @@ npx tsx packages/core/src/cli/index.ts gate reject <gate-id> \
 ### Request revision (agents re-run with feedback)
 
 ```bash
-npx tsx packages/core/src/cli/index.ts gate revise <gate-id> \
+npx agentforge gate revise <gate-id> \
   --notes "Add rate limiting to the API design" \
   --reviewer "Alice"
 ```
@@ -188,7 +197,7 @@ Click on a pending gate in the Gates page. Use the Approve/Reject/Revise buttons
 ### List pending gates
 
 ```bash
-npx tsx packages/core/src/cli/index.ts get gates --pipeline <pipeline-run-id>
+npx agentforge get gates --pipeline <pipeline-run-id>
 ```
 
 ---
@@ -230,14 +239,14 @@ Remote nodes allow you to distribute agent execution across multiple machines.
 
 ```bash
 # On your server/cloud machine
-npx tsx packages/core/src/cli/index.ts dashboard --host 0.0.0.0 --port 3001
+npx agentforge dashboard --host 0.0.0.0 --port 3001
 ```
 
 ### Start a remote node
 
 ```bash
 # On a different machine (or same machine for testing)
-npx tsx packages/core/src/cli/index.ts node start \
+npx agentforge node start \
   --control-plane-url http://control-plane-host:3001 \
   --token your-node-api-key \
   --name gpu-node \
@@ -255,7 +264,7 @@ The node will:
 
 ```bash
 # Run pipeline with Docker executor (launches container per agent job)
-npx tsx packages/core/src/cli/index.ts run \
+npx agentforge run \
   --project my-app \
   --executor docker \
   --executor-image my-executor:latest
@@ -265,7 +274,7 @@ npx tsx packages/core/src/cli/index.ts run \
 
 ```bash
 # Run pipeline delegating to a remote executor service
-npx tsx packages/core/src/cli/index.ts run \
+npx agentforge run \
   --project my-app \
   --executor remote \
   --executor-url http://gpu-node:8080

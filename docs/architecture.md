@@ -1,5 +1,7 @@
 # AgentForge — Architecture
 
+> Part of the [AgentForge documentation](README.md).
+
 ## Overview
 
 The AgentForge is a **Kubernetes-style control plane** for running AI agents as a coordinated pipeline. Agents are declaratively defined in YAML, executed sequentially through phases, and gated by human approval at each phase boundary.

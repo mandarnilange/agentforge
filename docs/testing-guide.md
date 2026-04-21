@@ -1,8 +1,10 @@
 # Testing Guide
 
+> Part of the [AgentForge documentation](README.md).
+
 This guide covers how to test AgentForge — from unit tests through to running a real pipeline with an actual API key.
 
-All examples use the bundled `simple-sdlc` template's three agents: `analyst`, `architect`, `developer`. Swap in your own agent names once you've scaffolded a project with `agentforge-core init`.
+All examples use the bundled `simple-sdlc` template's three agents: `analyst`, `architect`, `developer`. Swap in your own agent names once you've scaffolded a project with `agentforge init`.
 
 ---
 
@@ -47,7 +49,7 @@ Validates CLI wiring, config loading, and agent registration without calling the
 
 ```bash
 # Scaffold the simple-sdlc template into .agentforge/
-npx agentforge-core init --template simple-sdlc
+npx agentforge init --template simple-sdlc
 
 # Dry run any agent
 npx tsx packages/core/src/cli/index.ts exec analyst --input "Build a SaaS invoicing app" --dry-run
@@ -302,7 +304,7 @@ ls ./output/test-run/    # + code-output.json
 | Problem | Solution |
 |---------|----------|
 | `Error: ANTHROPIC_API_KEY is required` | `export ANTHROPIC_API_KEY=sk-ant-...` |
-| `Unknown agent: "xyz"` | Run `agentforge-core list` to see valid IDs in your `.agentforge/` scaffold |
+| `Unknown agent: "xyz"` | Run `agentforge list` to see valid IDs in your `.agentforge/` scaffold |
 | Empty artifacts (`{}`) | Check `--verbose` output; LLM may have returned malformed JSON |
 | Pipeline stuck at gate | Run `get gates --pipeline <id>` to find pending gate ID, then `gate approve <id>` |
 | State DB locked | Another process has the DB open; kill it or wait |

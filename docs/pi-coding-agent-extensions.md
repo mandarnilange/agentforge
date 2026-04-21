@@ -1,5 +1,7 @@
 # Pi Coding Agent: Programmatic Extensions & Tools
 
+> Part of the [AgentForge documentation](README.md).
+
 This guide explains how to add custom functionality (extensions and tools) to the Pi Coding Agent backend programmatically before calling `agent.run()`.
 
 ## Core Concepts
