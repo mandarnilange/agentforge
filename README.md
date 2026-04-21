@@ -8,6 +8,18 @@ AgentForge lets engineering teams define agents and pipelines the way Kubernetes
 
 ---
 
+## Agent orchestration platform for every team
+
+Any team running LLM-driven work — marketing, sales, HR, operations, legal, product, engineering — gets the same platform: cost control, observability, human-in-the-loop gates, typed artifacts, scheduling, recovery. You build the agents your domain needs; AgentForge handles the orchestration around them.
+
+- **Marketing, sales, HR, ops, legal, finance** — run LLM workflows through the same dashboard the engineers use. Plain-English revision notes, no code, no engineering escalations. Domain expertise stays with the domain experts.
+- **Product & engineering teams** — ship AI-assisted features without giving up code-review discipline. Your linter, tests, and security scanners gate the LLM; the dashboard gives a full audit trail for every decision.
+- **Platform teams** — stand up AgentForge once; every team in the org inherits cost tracking, audit logs, sandboxing, and observability. Zero per-team glue code to maintain. Adding a new team is a `git push`.
+
+One binary, one control plane, one audit trail. You focus on the systems; AgentForge handles the harness.
+
+---
+
 ## Key Features
 
 - **Declarative YAML for everything.** Agents, pipelines, nodes, and artifact schemas are data, not code. Version-control them, diff them, generate them, `apply` them to a persistent store.
@@ -15,7 +27,8 @@ AgentForge lets engineering teams define agents and pipelines the way Kubernetes
 - **Multiple execution targets — nodes.** `local` (in-process), Docker containers (per-agent isolation), and remote workers over SSH / HTTP. Agents declare `nodeAffinity`; the scheduler matches them to nodes by capabilities + load. Run heterogeneous worker pools (GPU, high-memory, lightweight) from the same image.
 - **Bring your own LLM provider.** Anthropic, OpenAI (GPT-4o, o1), Google Gemini, and Ollama (local). Mix providers *per agent* in the same pipeline — `model.provider` is agent-level, not global.
 - **Typed artifacts with schema validation.** 45 built-in Zod / JSON Schemas for SDLC outputs; define your own in a single file. Malformed LLM output fails the run before it poisons the next phase.
-- **Human approval gates as first-class objects.** Approve, reject, or request revision — from CLI, dashboard, or API. Gate decisions survive restarts.
+- **Humans in the loop, not just observers.** Between phases, a reviewer accepts, rejects, or redirects with a note in plain English — no YAML, no code. The LLM proposes; the human decides. Revision notes steer the next LLM call, so gates are a two-way conversation, not a rubber stamp. Every decision is signed, timestamped, and survives restarts.
+- **Cost guardrails at every layer.** Each agent declares its own token + dollar ceiling; pipelines carry org-wide limits set by the platform team; the dashboard shows spend accumulating in real time. A runaway LLM call aborts cleanly before it bills you — not after.
 - **Real-time dashboard in the binary.** React SPA + Server-Sent Events: pipeline timeline, live agent conversation, gate actions, artifact viewer, PDF export, cost tracking. No extra install.
 - **Batteries-included templates.** `simple-sdlc` starter (3 agents) in core. Platform binary ships `api-builder`, `code-review`, `content-generation`, `data-pipeline`, `seo-review` — real, runnable pipelines, not demos.
 - **Laptop-to-production continuum.** SQLite → PostgreSQL, local → Docker → remote workers, no-op OTel → full SDK with Jaeger/Grafana. Same YAML, same binary, env-var upgrades only. No migration.
