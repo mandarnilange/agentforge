@@ -121,12 +121,17 @@ describe("PostgresStateStore", () => {
 	});
 
 	describe("initialize()", () => {
-		it("runs the schema SQL", async () => {
-			mockQuery.mockResolvedValueOnce({ rows: [] });
+		it("runs migrations that create the schema", async () => {
+			// initialize() now: (1) create schema_migrations table,
+			// (2) select applied versions, (3) exec each pending migration,
+			// (4) insert into schema_migrations per applied migration.
+			mockQuery.mockResolvedValue({ rows: [] });
 			await store.initialize();
-			expect(mockQuery).toHaveBeenCalledWith(
-				expect.stringContaining("CREATE TABLE"),
-			);
+			const sqls = mockQuery.mock.calls
+				.map((c) => c[0])
+				.filter((s): s is string => typeof s === "string");
+			expect(sqls.some((s) => s.includes("CREATE TABLE"))).toBe(true);
+			expect(sqls.some((s) => s.includes("schema_migrations"))).toBe(true);
 		});
 	});
 

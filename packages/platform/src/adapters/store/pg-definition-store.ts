@@ -10,12 +10,32 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type {
 	AgentDefinitionYaml,
 	NodeDefinitionYaml,
 	PipelineDefinitionYaml,
 } from "agentforge-core/definitions/parser.js";
+import {
+	loadMigrations,
+	runMigrations,
+} from "agentforge-core/state/migrate.js";
 import pg from "pg";
+import { createPostgresExecutor } from "../../state/pg-migrate.js";
+
+// Resolves to dist/state/migrations/postgres at runtime and
+// src/state/migrations/postgres in tests/dev. Shared with PostgresStateStore
+// — both stores run against the same schema_migrations track so either
+// initialize() converges to a fully-migrated database.
+const PG_MIGRATIONS_DIR = join(
+	dirname(fileURLToPath(import.meta.url)),
+	"..",
+	"..",
+	"state",
+	"migrations",
+	"postgres",
+);
 
 export type DefinitionKind =
 	| "AgentDefinition"
@@ -43,33 +63,6 @@ export interface ResourceDefinitionHistory {
 	createdAt: string;
 }
 
-export const PG_DEFINITION_SCHEMA_SQL = `
-CREATE TABLE IF NOT EXISTS resource_definitions (
-  id TEXT PRIMARY KEY,
-  kind TEXT NOT NULL,
-  name TEXT NOT NULL,
-  version INTEGER NOT NULL DEFAULT 1,
-  spec_yaml TEXT NOT NULL,
-  metadata JSONB,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  UNIQUE(kind, name)
-);
-
-CREATE TABLE IF NOT EXISTS resource_definition_history (
-  id TEXT PRIMARY KEY,
-  definition_id TEXT NOT NULL,
-  version INTEGER NOT NULL,
-  spec_yaml TEXT NOT NULL,
-  changed_by TEXT NOT NULL,
-  change_type TEXT NOT NULL,
-  created_at TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_def_kind_name ON resource_definitions(kind, name);
-CREATE INDEX IF NOT EXISTS idx_def_history_def ON resource_definition_history(definition_id);
-`;
-
 export class PgDefinitionStore {
 	private readonly pool: pg.Pool;
 
@@ -78,7 +71,8 @@ export class PgDefinitionStore {
 	}
 
 	async initialize(): Promise<void> {
-		await this.pool.query(PG_DEFINITION_SCHEMA_SQL);
+		const migrations = await loadMigrations(PG_MIGRATIONS_DIR);
+		await runMigrations(migrations, createPostgresExecutor(this.pool));
 	}
 
 	async preflight(): Promise<void> {

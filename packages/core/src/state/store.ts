@@ -4,6 +4,9 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import type { AgentRunRecord } from "../domain/models/agent-run.model.js";
 import type { Gate } from "../domain/models/gate.model.js";
@@ -20,7 +23,64 @@ import type {
 	IStateStore,
 } from "../domain/ports/state-store.port.js";
 import { generateSessionName } from "../utils/session-name.js";
-import { SCHEMA_SQL } from "./schema.js";
+
+const SCHEMA_MIGRATIONS_DDL = `
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version TEXT PRIMARY KEY,
+  applied_at TEXT NOT NULL
+);
+`;
+
+/**
+ * Synchronous migration runner for better-sqlite3. Behaviour mirrors the
+ * shared async runner in `migrate.ts`: init tracking table, compute
+ * applied set, run missing `.sql` files in lexical order.
+ */
+function applySqliteMigrationsSync(
+	db: Database.Database,
+	migrationsDir: string,
+): void {
+	const runSql = (sql: string) => {
+		db.exec(sql);
+	};
+	runSql(SCHEMA_MIGRATIONS_DDL);
+	const applied = new Set(
+		(
+			db.prepare("SELECT version FROM schema_migrations").all() as Array<{
+				version: string;
+			}>
+		).map((r) => r.version),
+	);
+	let entries: string[];
+	try {
+		entries = readdirSync(migrationsDir);
+	} catch {
+		return;
+	}
+	const files = entries.filter((f) => f.endsWith(".sql")).sort();
+	const seen = new Set<string>();
+	for (const name of files) {
+		const version = name.slice(0, -".sql".length);
+		if (seen.has(version)) {
+			throw new Error(
+				`Duplicate migration version "${version}" in ${migrationsDir}`,
+			);
+		}
+		seen.add(version);
+		if (applied.has(version)) continue;
+		const sql = readFileSync(join(migrationsDir, name), "utf-8");
+		runSql(sql);
+		db.prepare(
+			"INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)",
+		).run(version, new Date().toISOString());
+	}
+}
+
+const STATE_MIGRATIONS_DIR = join(
+	dirname(fileURLToPath(import.meta.url)),
+	"migrations",
+	"sqlite",
+);
 
 export class SqliteStateStore implements IStateStore {
 	private readonly db: Database.Database;
@@ -29,29 +89,7 @@ export class SqliteStateStore implements IStateStore {
 		this.db = new Database(dbPath);
 		this.db.pragma("journal_mode = WAL");
 		this.db.pragma("foreign_keys = ON");
-		this.db.exec(SCHEMA_SQL);
-		// Migrate existing databases incrementally
-		for (const sql of [
-			"ALTER TABLE agent_runs ADD COLUMN revision_notes TEXT",
-			"ALTER TABLE agent_runs ADD COLUMN provider TEXT",
-			"ALTER TABLE agent_runs ADD COLUMN model_name TEXT",
-			"ALTER TABLE agent_runs ADD COLUMN cost_usd REAL",
-			"ALTER TABLE agent_runs ADD COLUMN last_status_at TEXT",
-			"ALTER TABLE agent_runs ADD COLUMN status_message TEXT",
-			"ALTER TABLE agent_runs ADD COLUMN retry_count INTEGER NOT NULL DEFAULT 0",
-			"ALTER TABLE agent_runs ADD COLUMN recovery_token TEXT",
-			"ALTER TABLE agent_runs ADD COLUMN exit_reason TEXT",
-			"ALTER TABLE pipeline_runs ADD COLUMN inputs TEXT",
-			"ALTER TABLE pipeline_runs ADD COLUMN version INTEGER NOT NULL DEFAULT 1",
-			"ALTER TABLE pipeline_runs ADD COLUMN session_name TEXT NOT NULL DEFAULT ''",
-			"ALTER TABLE gates ADD COLUMN version INTEGER NOT NULL DEFAULT 1",
-		]) {
-			try {
-				this.db.prepare(sql).run();
-			} catch {
-				// Column already exists — safe to ignore
-			}
-		}
+		applySqliteMigrationsSync(this.db, STATE_MIGRATIONS_DIR);
 	}
 
 	// --- Pipeline Runs ---

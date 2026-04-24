@@ -4,6 +4,8 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { AgentRunRecord } from "agentforge-core/domain/models/agent-run.model.js";
 import type { Gate } from "agentforge-core/domain/models/gate.model.js";
 import type { NodeRecord } from "agentforge-core/domain/models/node.model.js";
@@ -19,6 +21,10 @@ import type {
 	IStateStore,
 } from "agentforge-core/domain/ports/state-store.port.js";
 import {
+	loadMigrations,
+	runMigrations,
+} from "agentforge-core/state/migrate.js";
+import {
 	rowToAgentRun,
 	rowToAuditLog,
 	rowToExecutionLog,
@@ -28,7 +34,13 @@ import {
 } from "agentforge-core/state/row-mappers.js";
 import { generateSessionName } from "agentforge-core/utils/session-name.js";
 import pg from "pg";
-import { PG_SCHEMA_SQL } from "./pg-schema.js";
+import { createPostgresExecutor } from "./pg-migrate.js";
+
+const PG_MIGRATIONS_DIR = join(
+	dirname(fileURLToPath(import.meta.url)),
+	"migrations",
+	"postgres",
+);
 
 export class PostgresStateStore implements IStateStore {
 	private readonly pool: pg.Pool;
@@ -38,7 +50,8 @@ export class PostgresStateStore implements IStateStore {
 	}
 
 	async initialize(): Promise<void> {
-		await this.pool.query(PG_SCHEMA_SQL);
+		const migrations = await loadMigrations(PG_MIGRATIONS_DIR);
+		await runMigrations(migrations, createPostgresExecutor(this.pool));
 	}
 
 	/**
