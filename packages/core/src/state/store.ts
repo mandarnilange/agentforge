@@ -23,6 +23,14 @@ import type {
 	IStateStore,
 } from "../domain/ports/state-store.port.js";
 import { generateSessionName } from "../utils/session-name.js";
+import {
+	rowToAgentRun,
+	rowToAuditLog,
+	rowToExecutionLog,
+	rowToGate,
+	rowToNode,
+	rowToPipelineRun,
+} from "./row-mappers.js";
 
 const SCHEMA_MIGRATIONS_DDL = `
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -588,121 +596,7 @@ export class SqliteStateStore implements IStateStore {
 	}
 }
 
-// --- Row mappers ---
-
-function nullToUndefined<T>(value: T | null | undefined): T | undefined {
-	return value === null ? undefined : value;
-}
-
-function rowToPipelineRun(row: Record<string, unknown>): PipelineRun {
-	const inputsRaw = row.inputs as string | null;
-	return {
-		id: row.id as string,
-		sessionName: (row.session_name as string) || "",
-		projectName: row.project_name as string,
-		pipelineName: row.pipeline_name as string,
-		status: row.status as PipelineRun["status"],
-		currentPhase: row.current_phase as number,
-		inputs: inputsRaw
-			? (JSON.parse(inputsRaw) as Record<string, string>)
-			: undefined,
-		version: (row.version as number) ?? 1,
-		startedAt: row.started_at as string,
-		completedAt: nullToUndefined(row.completed_at as string | null),
-		createdAt: row.created_at as string,
-	};
-}
-
-function rowToAgentRun(row: Record<string, unknown>): AgentRunRecord {
-	return {
-		id: row.id as string,
-		pipelineRunId: row.pipeline_run_id as string,
-		agentName: row.agent_name as string,
-		phase: row.phase as number,
-		nodeName: row.node_name as string,
-		status: row.status as AgentRunRecord["status"],
-		inputArtifactIds: JSON.parse(row.input_artifact_ids as string),
-		outputArtifactIds: JSON.parse(row.output_artifact_ids as string),
-		tokenUsage: row.token_usage
-			? JSON.parse(row.token_usage as string)
-			: undefined,
-		provider: nullToUndefined(row.provider as string | null),
-		modelName: nullToUndefined(row.model_name as string | null),
-		costUsd: nullToUndefined(row.cost_usd as number | null),
-		durationMs: nullToUndefined(row.duration_ms as number | null),
-		error: nullToUndefined(row.error as string | null),
-		revisionNotes: nullToUndefined(row.revision_notes as string | null),
-		retryCount: (row.retry_count as number) ?? 0,
-		recoveryToken: nullToUndefined(row.recovery_token as string | null),
-		lastStatusAt: nullToUndefined(row.last_status_at as string | null),
-		statusMessage: nullToUndefined(row.status_message as string | null),
-		startedAt: row.started_at as string,
-		completedAt: nullToUndefined(row.completed_at as string | null),
-		createdAt: row.created_at as string,
-	};
-}
-
-function rowToNode(row: Record<string, unknown>): NodeRecord {
-	return {
-		name: row.name as string,
-		type: row.type as string,
-		capabilities: JSON.parse(row.capabilities as string),
-		maxConcurrentRuns: nullToUndefined(
-			row.max_concurrent_runs as number | null,
-		),
-		status: row.status as NodeRecord["status"],
-		activeRuns: row.active_runs as number,
-		lastHeartbeat: nullToUndefined(row.last_heartbeat as string | null),
-		updatedAt: row.updated_at as string,
-	};
-}
-
-function rowToGate(row: Record<string, unknown>): Gate {
-	return {
-		id: row.id as string,
-		pipelineRunId: row.pipeline_run_id as string,
-		phaseCompleted: row.phase_completed as number,
-		phaseNext: row.phase_next as number,
-		status: row.status as Gate["status"],
-		reviewer: nullToUndefined(row.reviewer as string | null),
-		comment: nullToUndefined(row.comment as string | null),
-		revisionNotes: nullToUndefined(row.revision_notes as string | null),
-		artifactVersionIds: JSON.parse(row.artifact_version_ids as string),
-		crossCuttingFindings: row.cross_cutting_findings
-			? JSON.parse(row.cross_cutting_findings as string)
-			: undefined,
-		version: (row.version as number) ?? 1,
-		decidedAt: nullToUndefined(row.decided_at as string | null),
-		createdAt: row.created_at as string,
-	};
-}
-
-function rowToExecutionLog(row: Record<string, unknown>): ExecutionLog {
-	const metadataRaw = row.metadata as string | null;
-	return {
-		id: row.id as string,
-		agentRunId: row.agent_run_id as string,
-		level: row.level as string,
-		message: row.message as string,
-		metadata: metadataRaw
-			? (JSON.parse(metadataRaw) as Record<string, unknown>)
-			: undefined,
-		timestamp: row.timestamp as string,
-	};
-}
-
-function rowToAuditLog(
-	row: Record<string, unknown>,
-): import("../domain/ports/state-store.port.js").AuditLog {
-	const metadataRaw = row.metadata as string | null;
-	return {
-		id: row.id as string,
-		pipelineRunId: row.pipeline_run_id as string,
-		actor: row.actor as string,
-		action: row.action as string,
-		resourceType: row.resource_type as string,
-		resourceId: row.resource_id as string,
-		metadata: metadataRaw ? JSON.parse(metadataRaw) : undefined,
-		createdAt: row.created_at as string,
-	};
-}
+// Row mappers live in ./row-mappers.js and are shared with PostgresStateStore
+// so column-to-field mapping stays in one place. Earlier this file kept a
+// parallel inline copy that drifted (exit_reason wasn't mapped) — don't
+// reintroduce that split.
