@@ -299,6 +299,43 @@ ls ./output/test-run/    # + code-output.json
 
 ---
 
+## 11. Multi-worker Validation
+
+Two layers — one in-process (always runs), one against real Docker (opt-in).
+
+### In-process HTTP dispatch test
+
+Boots a real control-plane HTTP server and attaches three in-process polling
+workers that register/heartbeat/poll/report-results via `fetch` — the same
+protocol the `docker-entrypoint.sh worker` path uses in production. Covers
+concurrency, capability routing, and silent-drop protection.
+
+```bash
+npx vitest run packages/platform/tests/integration/multi-worker.test.ts
+```
+
+No Docker daemon, no API key — runs as part of `npm test`.
+
+### Docker Compose smoke test
+
+Brings up `postgres` + `control-plane` + three heterogeneous workers
+(different names, capabilities, concurrency caps) under Docker Compose and
+asserts each one registers, advertises the right capabilities, and
+heartbeats within the last 30s. Gated behind an explicit shell invocation;
+**not** wired into `npm test`.
+
+```bash
+./packages/platform/tests/docker/multi-worker-smoke.sh
+```
+
+Requires `docker compose` v2, `jq`, `curl`. First run builds the image —
+expect ~2 minutes. No LLM key needed; the workers just register and idle.
+
+For full pipeline validation across multiple workers, run the stack with a
+real `ANTHROPIC_API_KEY` and use `agentforge run` per the sections above.
+
+---
+
 ## Troubleshooting
 
 | Problem | Solution |
