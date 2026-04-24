@@ -26,6 +26,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Multi-provider LLM backends — OpenAI (GPT-4o, o1), Google Gemini (2.5 Pro/Flash), Ollama (local). Mixed providers per pipeline: each agent picks its own `model.provider`.
 - Docker container and remote HTTP executors for isolated/distributed agent runs.
 - PostgreSQL state store with connection pooling, JSONB, and `SELECT 1` preflight at startup.
+- PostgreSQL definition store — in `AGENTFORGE_STATE_STORE=postgres` mode the `resource_definitions` + `resource_definition_history` tables move to Postgres alongside state. No SQLite file is created. The runtime sync `DefinitionStore` is in-memory (populated from YAML at boot and `apply`) and PG holds the persistence + audit trail.
 - Full OpenTelemetry SDK with Jaeger export.
 - Crash recovery (pipeline rehydration) and a reconciliation loop for stuck-run detection.
 - Rate limiting — token, cost, and concurrency limits per pipeline.

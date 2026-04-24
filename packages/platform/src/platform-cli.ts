@@ -23,10 +23,14 @@ import { GateController } from "agentforge-core/control-plane/gate-controller.js
 import { PipelineController } from "agentforge-core/control-plane/pipeline-controller.js";
 import { LocalAgentScheduler } from "agentforge-core/control-plane/scheduler.js";
 import { loadDefinitionsFromDir } from "agentforge-core/definitions/parser.js";
+import type { DefinitionStore } from "agentforge-core/definitions/store.js";
+import { createDefinitionStore } from "agentforge-core/definitions/store.js";
 import { traceStateStore } from "agentforge-core/observability/traced-state-store.js";
 import { SqliteStateStore } from "agentforge-core/state/store.js";
 import { Command } from "commander";
+import { PgDefinitionStore } from "./adapters/store/pg-definition-store.js";
 import { SqliteDefinitionStore } from "./adapters/store/sqlite-definition-store.js";
+import type { DefinitionPersistSink } from "./cli/commands/apply.js";
 import { registerApplyCommand } from "./cli/commands/apply.js";
 import { registerNodeStartCommand } from "./cli/commands/node-start.js";
 import { registerNodesCommands } from "./cli/commands/nodes.js";
@@ -81,20 +85,74 @@ const OUTPUT_DIR = resolve(
 	process.env.AGENTFORGE_OUTPUT_DIR ?? join(process.cwd(), "output"),
 );
 
-// --- Definition Store (persistent, DB-backed) ---
 mkdirSync(OUTPUT_DIR, { recursive: true });
-const DEFINITIONS_DB_PATH = join(OUTPUT_DIR, ".definitions.db");
-const sqliteDefinitionStore = new SqliteDefinitionStore(DEFINITIONS_DB_PATH);
-const definitionStore = sqliteDefinitionStore.asLegacyStore();
 
-// Auto-load definitions from .agentforge/ directories
+const USE_POSTGRES = process.env.AGENTFORGE_STATE_STORE === "postgres";
+const POSTGRES_URL = process.env.AGENTFORGE_POSTGRES_URL;
+
+if (USE_POSTGRES && !POSTGRES_URL) {
+	console.error(
+		"Configuration error: AGENTFORGE_STATE_STORE=postgres but AGENTFORGE_POSTGRES_URL is not set.",
+	);
+	console.error(
+		"Set AGENTFORGE_POSTGRES_URL=postgres://user:pass@host:port/db or unset AGENTFORGE_STATE_STORE to use SQLite.",
+	);
+	process.exit(1);
+}
+
+// --- Definition Store ---
+// SQLite mode: SqliteDefinitionStore is both the runtime sync store and the
+//   persistence/history store (single file on disk).
+// Postgres mode: PgDefinitionStore is the persistence/history store (async);
+//   the runtime sync DefinitionStore is an in-memory map populated from YAML.
+//   No SQLite file is created.
+const DEFINITIONS_DB_PATH = join(OUTPUT_DIR, ".definitions.db");
+let sqliteDefinitionStore: SqliteDefinitionStore | null = null;
+let pgDefinitionStore: PgDefinitionStore | null = null;
+let definitionStore: DefinitionStore;
+let applyPersistSink: DefinitionPersistSink | null = null;
+
+if (USE_POSTGRES) {
+	const pgStore = new PgDefinitionStore(POSTGRES_URL as string);
+	try {
+		await pgStore.preflight();
+		await pgStore.initialize();
+	} catch (err) {
+		console.error(
+			`Postgres definition-store startup check failed: ${err instanceof Error ? err.message : String(err)}`,
+		);
+		process.exit(1);
+	}
+	pgDefinitionStore = pgStore;
+	definitionStore = createDefinitionStore();
+	applyPersistSink = {
+		upsertAgent: (a, by) => pgStore.upsertAgent(a, by),
+		upsertPipeline: (p, by) => pgStore.upsertPipeline(p, by),
+		upsertNode: (n, by) => pgStore.upsertNode(n, by),
+	};
+} else {
+	sqliteDefinitionStore = new SqliteDefinitionStore(DEFINITIONS_DB_PATH);
+	definitionStore = sqliteDefinitionStore.asLegacyStore();
+}
+
+// Auto-load definitions from .agentforge/ directories — into the sync store
+// for runtime lookups, and also into the PG persistence store when present.
 const AGENTFORGE_DIR = join(process.cwd(), ".agentforge");
 for (const dir of ["agents", "pipelines", "nodes"]) {
 	try {
 		const loaded = loadDefinitionsFromDir(join(AGENTFORGE_DIR, dir));
-		for (const a of loaded.agents) definitionStore.addAgent(a);
-		for (const p of loaded.pipelines) definitionStore.addPipeline(p);
-		for (const n of loaded.nodes) definitionStore.addNode(n);
+		for (const a of loaded.agents) {
+			definitionStore.addAgent(a);
+			if (pgDefinitionStore) await pgDefinitionStore.upsertAgent(a, "boot");
+		}
+		for (const p of loaded.pipelines) {
+			definitionStore.addPipeline(p);
+			if (pgDefinitionStore) await pgDefinitionStore.upsertPipeline(p, "boot");
+		}
+		for (const n of loaded.nodes) {
+			definitionStore.addNode(n);
+			if (pgDefinitionStore) await pgDefinitionStore.upsertNode(n, "boot");
+		}
 	} catch {
 		// Directory may not exist — that's fine
 	}
@@ -104,19 +162,9 @@ for (const dir of ["agents", "pipelines", "nodes"]) {
 const STATE_DB_PATH = join(OUTPUT_DIR, ".agentforge-state.db");
 let stateStore: import("agentforge-core/domain/ports/state-store.port.js").IStateStore;
 
-if (process.env.AGENTFORGE_STATE_STORE === "postgres") {
-	const url = process.env.AGENTFORGE_POSTGRES_URL;
-	if (!url) {
-		console.error(
-			"Configuration error: AGENTFORGE_STATE_STORE=postgres but AGENTFORGE_POSTGRES_URL is not set.",
-		);
-		console.error(
-			"Set AGENTFORGE_POSTGRES_URL=postgres://user:pass@host:port/db or unset AGENTFORGE_STATE_STORE to use SQLite.",
-		);
-		process.exit(1);
-	}
+if (USE_POSTGRES) {
 	const { PostgresStateStore } = await import("./state/pg-store.js");
-	const pgStore = new PostgresStateStore(url);
+	const pgStore = new PostgresStateStore(POSTGRES_URL as string);
 	try {
 		await pgStore.preflight();
 		await pgStore.initialize();
@@ -223,7 +271,7 @@ registerTemplatesCommand(program, getPlatformTemplates());
 registerListCommand(program);
 registerInfoCommand(program);
 registerExecCommand(program);
-registerApplyCommand(program, definitionStore);
+registerApplyCommand(program, definitionStore, applyPersistSink);
 
 registerDashboardCommand(program, {
 	store: stateStore,
@@ -243,7 +291,8 @@ registerNodeStartCommand(program);
 
 void program.parseAsync().then(async () => {
 	await stateStore.close();
-	sqliteDefinitionStore.close();
+	if (sqliteDefinitionStore) sqliteDefinitionStore.close();
+	if (pgDefinitionStore) await pgDefinitionStore.close();
 	telemetryFlushed = true;
 	await flushTelemetry();
 });

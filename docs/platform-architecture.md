@@ -1041,7 +1041,7 @@ spec:
 
 Definitions are persisted to the database in the `resource_definitions` table — the platform's equivalent of etcd. YAML files on disk are the authoring format; the database is the runtime source of truth.
 
-**Implementation**: `SqliteDefinitionStore` (`src/adapters/store/sqlite-definition-store.ts`) — full CRUD with versioning, history tracking, and backward-compatible `asLegacyStore()` adapter for existing code.
+**Implementation**: `SqliteDefinitionStore` (`src/adapters/store/sqlite-definition-store.ts`) — full CRUD with versioning, history tracking, and backward-compatible `asLegacyStore()` adapter for existing code. When `AGENTFORGE_STATE_STORE=postgres`, the sibling `PgDefinitionStore` (`src/adapters/store/pg-definition-store.ts`) runs instead — same schema, same history model, no SQLite file on disk. The runtime uses an in-memory sync `DefinitionStore` populated from YAML at boot (and from `apply` at runtime); PG serves the persistence + history role.
 
 ```sql
 -- Resource definitions (agents, pipelines, nodes)
