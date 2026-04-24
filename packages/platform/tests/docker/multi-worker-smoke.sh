@@ -119,7 +119,14 @@ for w in $expected_workers; do
         echo "FAIL: $w has no lastHeartbeat" >&2
         exit 1
     fi
-    hb_epoch=$(date -u -d "$hb_iso" +%s 2>/dev/null || date -u -jf "%Y-%m-%dT%H:%M:%S.%3NZ" "$hb_iso" +%s 2>/dev/null || echo 0)
+    # ISO 8601 with milliseconds is portable only via Node, which is
+    # guaranteed available in this repo. BSD date can't parse `.NNNZ`
+    # and GNU date isn't on macOS by default.
+    hb_epoch=$(node -e 'process.stdout.write(String(Math.floor(new Date(process.argv[1]).getTime()/1000)))' "$hb_iso" 2>/dev/null || echo 0)
+    if [ "$hb_epoch" = "0" ] || [ -z "$hb_epoch" ]; then
+        echo "FAIL: $w heartbeat timestamp '$hb_iso' could not be parsed" >&2
+        exit 1
+    fi
     age=$((now_epoch - hb_epoch))
     if [ "$age" -gt 30 ] || [ "$age" -lt 0 ]; then
         echo "FAIL: $w heartbeat stale (${age}s old)" >&2
