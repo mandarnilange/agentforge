@@ -1,5 +1,11 @@
 # AgentForge
 
+[![CI](https://github.com/mandarnilange/agentforge/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mandarnilange/agentforge/actions/workflows/ci.yml)
+[![npm agentforge-core](https://img.shields.io/npm/v/agentforge-core?label=agentforge-core&color=blue)](https://www.npmjs.com/package/agentforge-core)
+[![npm agentforge](https://img.shields.io/npm/v/agentforge?label=agentforge&color=blue)](https://www.npmjs.com/package/agentforge)
+[![License: MIT](https://img.shields.io/github/license/mandarnilange/agentforge?color=green)](LICENSE)
+[![Node ≥20](https://img.shields.io/node/v/agentforge-core?color=brightgreen)](package.json)
+
 **Kubernetes for AI agent workflows.** Declarative agent orchestration in YAML, with approval gates, artifact validation, and a real observability story.
 
 AgentForge lets engineering teams define agents and pipelines the way Kubernetes lets them define pods and deployments — and then handles the execution, state, and scheduling underneath. Ships with a reference SDLC template so you can see an end-to-end pipeline running in minutes. The framework is domain-agnostic: point it at code review, content generation, ops runbooks, data pipelines — anything where multiple LLM calls need to be coordinated with humans in the loop.
