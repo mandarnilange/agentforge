@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, type Stats, statSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
@@ -318,6 +318,19 @@ export interface LoadedDefinitions {
 	nodes: NodeDefinitionYaml[];
 }
 
+/**
+ * Recursively load every AgentDefinition / PipelineDefinition /
+ * NodeDefinition YAML under `dir`. Designed so users can pass a template
+ * root (e.g. `.../api-builder`) and have agents/, pipelines/, nodes/
+ * picked up in one call.
+ *
+ * Tolerant of non-definition YAMLs that may live alongside (e.g.
+ * `schemas/*.schema.yaml` are JSON-Schema documents, not AgentForge
+ * resources). We sniff `apiVersion: agentforge/v1` + a known `kind`
+ * before parsing; mismatches are skipped silently. Files that DO claim
+ * to be a definition but fail validation still throw — surfaced to the
+ * user so they catch real schema bugs.
+ */
 export function loadDefinitionsFromDir(dir: string): LoadedDefinitions {
 	const result: LoadedDefinitions = {
 		agents: [],
@@ -325,26 +338,66 @@ export function loadDefinitionsFromDir(dir: string): LoadedDefinitions {
 		nodes: [],
 	};
 
-	const files = readdirSync(dir).filter(
-		(f) => f.endsWith(".yaml") || f.endsWith(".yml"),
-	);
-
-	for (const file of files) {
-		const filePath = join(dir, file);
-		const def = parseDefinitionFile(filePath);
-
-		switch (def.kind) {
-			case "AgentDefinition":
-				result.agents.push(def);
-				break;
-			case "PipelineDefinition":
-				result.pipelines.push(def);
-				break;
-			case "NodeDefinition":
-				result.nodes.push(def);
-				break;
+	const isDefinitionYaml = (filePath: string): boolean => {
+		try {
+			const raw = parseYaml(readFileSync(filePath, "utf-8")) as
+				| Record<string, unknown>
+				| null
+				| undefined;
+			if (!raw || typeof raw !== "object") return false;
+			if (raw.apiVersion !== "agentforge/v1") return false;
+			return (
+				raw.kind === "AgentDefinition" ||
+				raw.kind === "PipelineDefinition" ||
+				raw.kind === "NodeDefinition"
+			);
+		} catch {
+			// Malformed YAML — skip silently here; if it was a real definition
+			// the user would have caught it at write time.
+			return false;
 		}
-	}
+	};
 
+	const visit = (currentDir: string): void => {
+		let names: string[];
+		try {
+			names = readdirSync(currentDir);
+		} catch {
+			return;
+		}
+		for (const name of names) {
+			const full = join(currentDir, name);
+			let stats: Stats;
+			try {
+				stats = statSync(full);
+			} catch {
+				continue;
+			}
+			if (stats.isDirectory()) {
+				visit(full);
+				continue;
+			}
+			if (!stats.isFile()) continue;
+			if (!name.endsWith(".yaml") && !name.endsWith(".yml")) {
+				continue;
+			}
+			if (!isDefinitionYaml(full)) continue;
+			const def = parseDefinitionFile(full);
+
+			switch (def.kind) {
+				case "AgentDefinition":
+					result.agents.push(def);
+					break;
+				case "PipelineDefinition":
+					result.pipelines.push(def);
+					break;
+				case "NodeDefinition":
+					result.nodes.push(def);
+					break;
+			}
+		}
+	};
+
+	visit(dir);
 	return result;
 }
