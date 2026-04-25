@@ -26,6 +26,27 @@ import type { SchemaValidator } from "./schema-validator.js";
 const SCHEMA_YAML_SUFFIX = ".schema.yaml";
 const SCHEMA_JSON_SUFFIX = ".schema.json";
 
+/**
+ * Compile in-memory schema bodies (e.g. hydrated from PG) into validators.
+ * Same shape as `discoverSchemas()` but takes pre-loaded bodies instead of
+ * scanning the filesystem. Used at boot and on the PG-mode refresh tick to
+ * keep `setDiscoveredSchemas` aligned with the persisted state.
+ */
+export function buildSchemaValidators(
+	schemas: ReadonlyArray<{ name: string; schema: Record<string, unknown> }>,
+): Map<string, SchemaValidator> {
+	const validators = new Map<string, SchemaValidator>();
+	const ajv = new Ajv({ allErrors: true });
+	for (const { name, schema } of schemas) {
+		const body = { ...schema };
+		// AJV 8 doesn't support draft 2020-12 $schema — strip before compilation.
+		delete (body as Record<string, unknown>).$schema;
+		const validateFn = ajv.compile(body);
+		validators.set(name, new AjvSchemaAdapter(validateFn, body));
+	}
+	return validators;
+}
+
 export function discoverSchemas(
 	schemasDir: string,
 ): Map<string, SchemaValidator> {

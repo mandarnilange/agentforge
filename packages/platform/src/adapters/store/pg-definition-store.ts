@@ -36,7 +36,8 @@ const PG_MIGRATIONS_DIR = join(
 export type DefinitionKind =
 	| "AgentDefinition"
 	| "PipelineDefinition"
-	| "NodeDefinition";
+	| "NodeDefinition"
+	| "Schema";
 
 export interface ResourceDefinition {
 	id: string;

@@ -312,10 +312,26 @@ export function parseDefinitionFile(filePath: string): ParsedDefinition {
 	}
 }
 
+/**
+ * A JSON-Schema body associated with a named artifact type. Schemas live
+ * alongside agents / pipelines / nodes in template directories under
+ * `schemas/<artifact-type>.schema.yaml` and validate agent outputs at
+ * phase boundaries.
+ *
+ * The `name` is derived from the filename (e.g. `api-spec.schema.yaml`
+ * → `api-spec`) and matches the agent yaml's `outputs[].type`.
+ */
+export interface SchemaResource {
+	readonly name: string;
+	readonly source: string;
+	readonly schema: Record<string, unknown>;
+}
+
 export interface LoadedDefinitions {
 	agents: AgentDefinitionYaml[];
 	pipelines: PipelineDefinitionYaml[];
 	nodes: NodeDefinitionYaml[];
+	schemas: SchemaResource[];
 }
 
 /**
@@ -336,6 +352,7 @@ export function loadDefinitionsFromDir(dir: string): LoadedDefinitions {
 		agents: [],
 		pipelines: [],
 		nodes: [],
+		schemas: [],
 	};
 
 	const isDefinitionYaml = (filePath: string): boolean => {
@@ -352,9 +369,35 @@ export function loadDefinitionsFromDir(dir: string): LoadedDefinitions {
 				raw.kind === "NodeDefinition"
 			);
 		} catch {
-			// Malformed YAML — skip silently here; if it was a real definition
-			// the user would have caught it at write time.
 			return false;
+		}
+	};
+
+	const tryReadSchema = (
+		filePath: string,
+		fileName: string,
+	): SchemaResource | null => {
+		try {
+			const raw = readFileSync(filePath, "utf-8");
+			const parsed = fileName.endsWith(".schema.json")
+				? JSON.parse(raw)
+				: parseYaml(raw);
+			if (!parsed || typeof parsed !== "object") return null;
+			// Heuristic: a JSON Schema body at minimum has a `type` field or
+			// `$schema` declaration. We accept either. Definition envelopes
+			// (kind: ...) are excluded here — they're caught above.
+			const obj = parsed as Record<string, unknown>;
+			if ("kind" in obj && "apiVersion" in obj) return null;
+			const looksLikeSchema =
+				"$schema" in obj || "type" in obj || "properties" in obj;
+			if (!looksLikeSchema) return null;
+			const suffix = fileName.endsWith(".schema.json")
+				? ".schema.json"
+				: ".schema.yaml";
+			const name = fileName.slice(0, -suffix.length);
+			return { name, source: filePath, schema: obj };
+		} catch {
+			return null;
 		}
 	};
 
@@ -378,9 +421,17 @@ export function loadDefinitionsFromDir(dir: string): LoadedDefinitions {
 				continue;
 			}
 			if (!stats.isFile()) continue;
-			if (!name.endsWith(".yaml") && !name.endsWith(".yml")) {
+
+			// Schema files (*.schema.yaml / *.schema.json) — collect
+			// regardless of envelope. Anything else is checked for the
+			// AgentForge definition envelope.
+			if (name.endsWith(".schema.yaml") || name.endsWith(".schema.json")) {
+				const schema = tryReadSchema(full, name);
+				if (schema) result.schemas.push(schema);
 				continue;
 			}
+
+			if (!name.endsWith(".yaml") && !name.endsWith(".yml")) continue;
 			if (!isDefinitionYaml(full)) continue;
 			const def = parseDefinitionFile(full);
 

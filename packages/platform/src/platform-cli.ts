@@ -31,6 +31,8 @@ import { loadDefinitionsFromDir } from "agentforge-core/definitions/parser.js";
 import type { DefinitionStore } from "agentforge-core/definitions/store.js";
 import { createDefinitionStore } from "agentforge-core/definitions/store.js";
 import { traceStateStore } from "agentforge-core/observability/traced-state-store.js";
+import { setDiscoveredSchemas } from "agentforge-core/schemas/index.js";
+import { buildSchemaValidators } from "agentforge-core/schemas/schema-discovery.js";
 import { SqliteStateStore } from "agentforge-core/state/store.js";
 import { Command } from "commander";
 import { PgDefinitionStore } from "./adapters/store/pg-definition-store.js";
@@ -158,14 +160,74 @@ if (USE_POSTGRES) {
 		pgKnownNodes.add(node.metadata.name);
 	}
 
+	// Schemas: compile bodies stored in PG (kind="Schema") into ajv
+	// validators and register globally so getValidatorForType() finds them.
+	{
+		const schemaRows = await pgStore.list("Schema");
+		const schemas = schemaRows.map((row) => ({
+			name: row.name,
+			schema: JSON.parse(row.specYaml) as Record<string, unknown>,
+		}));
+		setDiscoveredSchemas(buildSchemaValidators(schemas));
+	}
+
 	applyPersistSink = {
 		upsertAgent: (a, by) => pgStore.upsertAgent(a, by),
 		upsertPipeline: (p, by) => pgStore.upsertPipeline(p, by),
 		upsertNode: (n, by) => pgStore.upsertNode(n, by),
+		upsertSchema: (s, by) =>
+			pgStore.upsert("Schema", s.name, JSON.stringify(s.schema), by).then(),
 	};
 } else {
 	sqliteDefinitionStore = new SqliteDefinitionStore(DEFINITIONS_DB_PATH);
 	definitionStore = sqliteDefinitionStore.asLegacyStore();
+	// Even in SQLite mode we want apply to persist schemas so dashboard /
+	// re-runs see them. Goes through the same SqliteDefinitionStore as
+	// agents/pipelines/nodes; kind="Schema" is just another row.
+	const sqliteStore = sqliteDefinitionStore;
+	applyPersistSink = {
+		upsertAgent: async (a, by) => {
+			sqliteStore.upsert(
+				"AgentDefinition",
+				a.metadata.name,
+				JSON.stringify(a, null, 2),
+				by,
+			);
+		},
+		upsertPipeline: async (p, by) => {
+			sqliteStore.upsert(
+				"PipelineDefinition",
+				p.metadata.name,
+				JSON.stringify(p, null, 2),
+				by,
+			);
+		},
+		upsertNode: async (n, by) => {
+			sqliteStore.upsert(
+				"NodeDefinition",
+				n.metadata.name,
+				JSON.stringify(n, null, 2),
+				by,
+			);
+		},
+		upsertSchema: async (s, by) => {
+			sqliteStore.upsert("Schema", s.name, JSON.stringify(s.schema), by);
+		},
+	};
+	// Hydrate schema validators from the SQLite definition store at boot.
+	// Backwards compat: legacy filesystem schemas at .agentforge/schemas/
+	// continue to work via discoverSchemas() in di/container.ts; this layers
+	// on top so apply'd schemas are visible without restart.
+	{
+		const schemaRows = sqliteStore.list("Schema");
+		if (schemaRows.length > 0) {
+			const schemas = schemaRows.map((row) => ({
+				name: row.name,
+				schema: JSON.parse(row.specYaml) as Record<string, unknown>,
+			}));
+			setDiscoveredSchemas(buildSchemaValidators(schemas));
+		}
+	}
 }
 
 // Auto-load definitions from local .agentforge/.
@@ -175,28 +237,32 @@ if (USE_POSTGRES) {
 //   already persisted. To push edits to existing names, run `agentforge
 //   apply -f <path>` or use the dashboard — those go through the explicit
 //   write path that bumps version + writes history.
+//
+// Recursive scan picks up agents/, pipelines/, nodes/, schemas/, and any
+// nested layout the user has under .agentforge/.
 const AGENTFORGE_DIR = join(process.cwd(), ".agentforge");
-for (const dir of ["agents", "pipelines", "nodes"]) {
-	try {
-		const loaded = loadDefinitionsFromDir(join(AGENTFORGE_DIR, dir));
-		for (const a of loaded.agents) {
-			if (USE_POSTGRES && pgKnownAgents.has(a.metadata.name)) continue;
-			definitionStore.addAgent(a);
-			if (pgDefinitionStore) await pgDefinitionStore.upsertAgent(a, "boot");
-		}
-		for (const p of loaded.pipelines) {
-			if (USE_POSTGRES && pgKnownPipelines.has(p.metadata.name)) continue;
-			definitionStore.addPipeline(p);
-			if (pgDefinitionStore) await pgDefinitionStore.upsertPipeline(p, "boot");
-		}
-		for (const n of loaded.nodes) {
-			if (USE_POSTGRES && pgKnownNodes.has(n.metadata.name)) continue;
-			definitionStore.addNode(n);
-			if (pgDefinitionStore) await pgDefinitionStore.upsertNode(n, "boot");
-		}
-	} catch {
-		// Directory may not exist — that's fine
+try {
+	const loaded = loadDefinitionsFromDir(AGENTFORGE_DIR);
+	for (const a of loaded.agents) {
+		if (USE_POSTGRES && pgKnownAgents.has(a.metadata.name)) continue;
+		definitionStore.addAgent(a);
+		if (pgDefinitionStore) await pgDefinitionStore.upsertAgent(a, "boot");
 	}
+	for (const p of loaded.pipelines) {
+		if (USE_POSTGRES && pgKnownPipelines.has(p.metadata.name)) continue;
+		definitionStore.addPipeline(p);
+		if (pgDefinitionStore) await pgDefinitionStore.upsertPipeline(p, "boot");
+	}
+	for (const n of loaded.nodes) {
+		if (USE_POSTGRES && pgKnownNodes.has(n.metadata.name)) continue;
+		definitionStore.addNode(n);
+		if (pgDefinitionStore) await pgDefinitionStore.upsertNode(n, "boot");
+	}
+	for (const s of loaded.schemas) {
+		await applyPersistSink?.upsertSchema(s, "boot");
+	}
+} catch {
+	// .agentforge directory absent — fine, nothing to seed.
 }
 
 // PG-mode definition refresh loop.
@@ -218,10 +284,11 @@ if (USE_POSTGRES && pgDefinitionStore) {
 	const refresh = async (): Promise<void> => {
 		if (!pgDefinitionStore) return;
 		try {
-			const [agents, pipelines, nodes] = await Promise.all([
+			const [agents, pipelines, nodes, schemas] = await Promise.all([
 				pgDefinitionStore.list("AgentDefinition"),
 				pgDefinitionStore.list("PipelineDefinition"),
 				pgDefinitionStore.list("NodeDefinition"),
+				pgDefinitionStore.list("Schema"),
 			]);
 			definitionStore.clear();
 			for (const def of agents) {
@@ -237,6 +304,15 @@ if (USE_POSTGRES && pgDefinitionStore) {
 			for (const def of nodes) {
 				definitionStore.addNode(JSON.parse(def.specYaml) as NodeDefinitionYaml);
 			}
+			// Schemas: rebuild the global validator registry from the persisted
+			// rows. setDiscoveredSchemas atomically replaces the map, so reads
+			// during a refresh see either the old or the new state, never a
+			// half-built one.
+			const schemaBodies = schemas.map((row) => ({
+				name: row.name,
+				schema: JSON.parse(row.specYaml) as Record<string, unknown>,
+			}));
+			setDiscoveredSchemas(buildSchemaValidators(schemaBodies));
 		} catch {
 			// Best-effort — a transient PG hiccup keeps the previous
 			// in-memory state instead of clearing it.
