@@ -58,6 +58,10 @@ COPY --from=build /app/packages/core/dist/ ./packages/core/dist/
 COPY --from=build /app/packages/core/src/dashboard/dist/ ./packages/core/src/dashboard/dist/
 COPY .agentforge/ ./.agentforge/
 RUN mkdir -p /app/output
+# Expose the CLI on PATH so `docker exec ... agentforge-core <subcmd>` works
+# without having to remember the dist path. Mirrors the npm `bin` behaviour.
+RUN chmod +x /app/packages/core/dist/cli/index.js \
+    && ln -s /app/packages/core/dist/cli/index.js /usr/local/bin/agentforge-core
 ENV NODE_ENV=production
 EXPOSE 3001
 ENTRYPOINT ["node", "packages/core/dist/cli/index.js"]
@@ -72,6 +76,14 @@ COPY .agentforge/ ./.agentforge/
 COPY docker-entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 RUN mkdir -p /app/output
+# Expose both CLIs on PATH so `docker exec ... agentforge <subcmd>` works
+# without having to invoke `node packages/platform/dist/platform-cli.js`.
+# Mirrors the npm `bin` behaviour for users who shell into the container
+# (e.g. to run `agentforge apply -f ...` against the running stack).
+RUN chmod +x /app/packages/core/dist/cli/index.js \
+    && chmod +x /app/packages/platform/dist/platform-cli.js \
+    && ln -s /app/packages/core/dist/cli/index.js /usr/local/bin/agentforge-core \
+    && ln -s /app/packages/platform/dist/platform-cli.js /usr/local/bin/agentforge
 ENV NODE_ENV=production
 EXPOSE 3001
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
