@@ -103,6 +103,55 @@ Policies bind to agents or pipeline phases. The executor checks each tool call /
 
 ---
 
+## Prompts as first-class resources
+
+**Problem.** System prompts are embedded inside agent definitions today (`spec.systemPrompt.text` inline, or `spec.systemPrompt.file: "prompts/<name>.system.md"` resolved against the agent's source dir at apply time). There's no way to:
+
+- `apply` a prompt directly (no `Prompt` kind)
+- View / edit prompts in the dashboard (no Prompts tab)
+- Reference a shared prompt across multiple agents (each has its own copy)
+- Update a prompt without touching the agent yaml
+
+This shows up in two practical pain points: editing one agent yaml in isolation silently strips the inlined prompt unless the prompt file travels alongside, and a prompt update means a version-bump on every agent that copy-pasted it.
+
+**Proposal.** Mirror the schema pattern landed in v0.2.0:
+
+- New `Prompt` kind. `apply` walks `prompts/*.system.md` files alongside agents/pipelines/nodes/schemas, persists each with `kind="Prompt"`, `name=<filename without .system.md>`, body in `spec_yaml` as the markdown.
+- Agent yaml gains a third option in `systemPrompt`: `ref: "<prompt-name>"` — looks up by name at runtime through a new `getDiscoveredPrompt()` global (parallel to `getDiscoveredSchema()`).
+- `apply` continues to inline `file:` references for backward compat, but emits a deprecation hint nudging toward the explicit `ref:` form.
+- Dashboard gets a Prompts tab in Settings (parallel to Schemas).
+- Single-file `apply` of `*.system.md` resolves to a Prompt resource — gives users a no-yaml way to update a shared prompt.
+
+**Touches.** New `Prompt` kind in `DefinitionKind` union (both stores already accept it as a string). New `prompts/index.ts` registry parallel to `schemas/index.ts`. Apply command directory + single-file branches. Dashboard route + Settings tab. Backward-compat shim that keeps `systemPrompt.file` working.
+
+---
+
+## Definition propagation across processes
+
+### Async `DefinitionStore` interface
+
+**Problem.** The runtime `DefinitionStore` interface is synchronous (`getAgent(name): T | undefined`). PG queries are async. To bridge the gap, platform-cli holds an in-memory cache hydrated from PG at boot and refreshed every 5 seconds. That cache is a real moving part: every long-running process (control plane, every worker) carries its own copy, and they drift between refresh ticks. Eliminating the cache requires every consumer of `DefinitionStore.getAgent / listAgents / getPipeline / getNode` (50+ call sites in the agent runner, pipeline controller, scheduler, dashboard server, init / list / info / exec / gate CLIs) to become async-aware.
+
+**Proposal.** Widen `DefinitionStore` to async — `getAgent(): Promise<T | undefined>` etc. — and have platform-cli return a thin async wrapper around `pgDefinitionStore` (or a sync-to-async wrapper around `sqliteDefinitionStore`). Drop the in-memory hydration + 5s refresh. Reads always hit the underlying store; PG / SQLite WAL handle the concurrency.
+
+**Touches.** `packages/core/src/definitions/store.ts` (interface widening), every call site under `packages/core/src/{agents,cli,control-plane,engine}` and `packages/platform/src` that calls `definitionStore.X()` (audit + add `await`), platform-cli boot (drop `pgRefreshInterval`, drop the in-memory hydration loop, drop the `pgKnown*` sets), tests.
+
+### Postgres LISTEN/NOTIFY for definition changes
+
+**Problem.** Even if the cache stays in v0.2.0, the 5s polling refresh is a real failure mode in distributed deployments:
+
+- **Apply / run race.** Apply at T=0 on CP-1 → CP-1 sees it immediately. Worker on host B last polled at T=4 → its in-memory cache is stale through T=8. A job dispatched in that window can run against the old definition.
+- **Cost.** N workers × 4 LIST queries every 5s = 48N PG queries/minute just for definition staleness. Tolerable at 3 workers, wasteful at 50.
+- **Latency floor.** Worst-case propagation = 2 × `AGENTFORGE_PG_DEFINITIONS_REFRESH_MS` ≈ 10s. Tightening the interval scales the cost linearly.
+
+**Proposal.** PostgreSQL `LISTEN` channel `agentforge_definitions`. `apply` performs `NOTIFY agentforge_definitions, '<kind>:<name>'` after each `INSERT`/`UPDATE`. Every CP / worker process holds one dedicated `pg.Client` LISTEN'ing on that channel; on receipt, it re-fetches the affected row (or the full set on `*`) and updates its cache atomically. Push instead of poll — propagation drops from 5s to <100ms; PG query cost drops to ~zero in steady state.
+
+**Touches.** New module `packages/platform/src/state/pg-listen.ts` (Client lifecycle, reconnect, channel name constant), `pg-definition-store.ts` (emit `NOTIFY` from `create` / `update` / `delete`), `platform-cli.ts` (replace `pgRefreshInterval` with the listener), keep-alive ping per [pg docs](https://node-postgres.com/apis/client#async-notifications). Optional: same channel for state-store changes so dashboard live-update doesn't depend on SSE alone.
+
+**Together with the async-DefinitionStore item above, these eliminate the in-memory cache entirely.** The async migration is the architectural cleanup; LISTEN/NOTIFY is the performance + correctness story for distributed deployments. Either is useful on its own; both together remove a whole class of "did the apply propagate yet?" question.
+
+---
+
 ## Memory & context
 
 ### Per-project vector store + RAG
