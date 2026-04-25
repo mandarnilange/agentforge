@@ -4,6 +4,9 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import type { AgentRunRecord } from "../domain/models/agent-run.model.js";
 import type { Gate } from "../domain/models/gate.model.js";
@@ -20,7 +23,120 @@ import type {
 	IStateStore,
 } from "../domain/ports/state-store.port.js";
 import { generateSessionName } from "../utils/session-name.js";
-import { SCHEMA_SQL } from "./schema.js";
+import {
+	rowToAgentRun,
+	rowToAuditLog,
+	rowToExecutionLog,
+	rowToGate,
+	rowToNode,
+	rowToPipelineRun,
+} from "./row-mappers.js";
+
+const SCHEMA_MIGRATIONS_DDL = `
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version TEXT PRIMARY KEY,
+  applied_at TEXT NOT NULL
+);
+`;
+
+/**
+ * Columns added to the v0.2.0 baseline tables AFTER the original
+ * SqliteStateStore CREATE TABLEs (which earlier shipped via incremental
+ * `ALTER TABLE ADD COLUMN` blocks). On a pre-v0.2.0 DB the baseline
+ * `CREATE TABLE IF NOT EXISTS` no-ops, so without a bridge step these
+ * columns stay missing while schema_migrations gets 001-state recorded.
+ */
+const PRE_BASELINE_BRIDGE_ALTERS: ReadonlyArray<string> = [
+	"ALTER TABLE agent_runs ADD COLUMN revision_notes TEXT",
+	"ALTER TABLE agent_runs ADD COLUMN provider TEXT",
+	"ALTER TABLE agent_runs ADD COLUMN model_name TEXT",
+	"ALTER TABLE agent_runs ADD COLUMN cost_usd REAL",
+	"ALTER TABLE agent_runs ADD COLUMN last_status_at TEXT",
+	"ALTER TABLE agent_runs ADD COLUMN status_message TEXT",
+	"ALTER TABLE agent_runs ADD COLUMN retry_count INTEGER NOT NULL DEFAULT 0",
+	"ALTER TABLE agent_runs ADD COLUMN recovery_token TEXT",
+	"ALTER TABLE agent_runs ADD COLUMN exit_reason TEXT",
+	"ALTER TABLE pipeline_runs ADD COLUMN inputs TEXT",
+	"ALTER TABLE pipeline_runs ADD COLUMN version INTEGER NOT NULL DEFAULT 1",
+	"ALTER TABLE pipeline_runs ADD COLUMN session_name TEXT NOT NULL DEFAULT ''",
+	"ALTER TABLE gates ADD COLUMN version INTEGER NOT NULL DEFAULT 1",
+];
+
+/**
+ * Bring a pre-v0.2.0 DB forward in place. Detects "pipeline_runs exists
+ * but schema_migrations does not" — only true for legacy DBs. Each ALTER
+ * is wrapped so already-present columns don't fail the boot.
+ */
+function bridgePreBaselineSqlite(db: Database.Database): void {
+	const existingTables = new Set(
+		(
+			db
+				.prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+				.all() as Array<{ name: string }>
+		).map((r) => r.name),
+	);
+	if (!existingTables.has("pipeline_runs")) return; // fresh install
+	if (existingTables.has("schema_migrations")) return; // already migrated
+	for (const sql of PRE_BASELINE_BRIDGE_ALTERS) {
+		try {
+			db.prepare(sql).run();
+		} catch {
+			// Column already exists — partial bridges are fine.
+		}
+	}
+}
+
+/**
+ * Synchronous migration runner for better-sqlite3. Behaviour mirrors the
+ * shared async runner in `migrate.ts`: init tracking table, compute
+ * applied set, run missing `.sql` files in lexical order.
+ */
+function applySqliteMigrationsSync(
+	db: Database.Database,
+	migrationsDir: string,
+): void {
+	const runSql = (sql: string) => {
+		db.exec(sql);
+	};
+	bridgePreBaselineSqlite(db);
+	runSql(SCHEMA_MIGRATIONS_DDL);
+	const applied = new Set(
+		(
+			db.prepare("SELECT version FROM schema_migrations").all() as Array<{
+				version: string;
+			}>
+		).map((r) => r.version),
+	);
+	let entries: string[];
+	try {
+		entries = readdirSync(migrationsDir);
+	} catch {
+		return;
+	}
+	const files = entries.filter((f) => f.endsWith(".sql")).sort();
+	const seen = new Set<string>();
+	for (const name of files) {
+		const version = name.slice(0, -".sql".length);
+		if (seen.has(version)) {
+			throw new Error(
+				`Duplicate migration version "${version}" in ${migrationsDir}`,
+			);
+		}
+		seen.add(version);
+		if (applied.has(version)) continue;
+		const sql = readFileSync(join(migrationsDir, name), "utf-8");
+		runSql(sql);
+		db.prepare(
+			"INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)",
+		).run(version, new Date().toISOString());
+	}
+}
+
+const STATE_MIGRATIONS_DIR = join(
+	dirname(fileURLToPath(import.meta.url)),
+	"migrations",
+	"sqlite",
+);
 
 export class SqliteStateStore implements IStateStore {
 	private readonly db: Database.Database;
@@ -29,29 +145,7 @@ export class SqliteStateStore implements IStateStore {
 		this.db = new Database(dbPath);
 		this.db.pragma("journal_mode = WAL");
 		this.db.pragma("foreign_keys = ON");
-		this.db.exec(SCHEMA_SQL);
-		// Migrate existing databases incrementally
-		for (const sql of [
-			"ALTER TABLE agent_runs ADD COLUMN revision_notes TEXT",
-			"ALTER TABLE agent_runs ADD COLUMN provider TEXT",
-			"ALTER TABLE agent_runs ADD COLUMN model_name TEXT",
-			"ALTER TABLE agent_runs ADD COLUMN cost_usd REAL",
-			"ALTER TABLE agent_runs ADD COLUMN last_status_at TEXT",
-			"ALTER TABLE agent_runs ADD COLUMN status_message TEXT",
-			"ALTER TABLE agent_runs ADD COLUMN retry_count INTEGER NOT NULL DEFAULT 0",
-			"ALTER TABLE agent_runs ADD COLUMN recovery_token TEXT",
-			"ALTER TABLE agent_runs ADD COLUMN exit_reason TEXT",
-			"ALTER TABLE pipeline_runs ADD COLUMN inputs TEXT",
-			"ALTER TABLE pipeline_runs ADD COLUMN version INTEGER NOT NULL DEFAULT 1",
-			"ALTER TABLE pipeline_runs ADD COLUMN session_name TEXT NOT NULL DEFAULT ''",
-			"ALTER TABLE gates ADD COLUMN version INTEGER NOT NULL DEFAULT 1",
-		]) {
-			try {
-				this.db.prepare(sql).run();
-			} catch {
-				// Column already exists — safe to ignore
-			}
-		}
+		applySqliteMigrationsSync(this.db, STATE_MIGRATIONS_DIR);
 	}
 
 	// --- Pipeline Runs ---
@@ -550,121 +644,7 @@ export class SqliteStateStore implements IStateStore {
 	}
 }
 
-// --- Row mappers ---
-
-function nullToUndefined<T>(value: T | null | undefined): T | undefined {
-	return value === null ? undefined : value;
-}
-
-function rowToPipelineRun(row: Record<string, unknown>): PipelineRun {
-	const inputsRaw = row.inputs as string | null;
-	return {
-		id: row.id as string,
-		sessionName: (row.session_name as string) || "",
-		projectName: row.project_name as string,
-		pipelineName: row.pipeline_name as string,
-		status: row.status as PipelineRun["status"],
-		currentPhase: row.current_phase as number,
-		inputs: inputsRaw
-			? (JSON.parse(inputsRaw) as Record<string, string>)
-			: undefined,
-		version: (row.version as number) ?? 1,
-		startedAt: row.started_at as string,
-		completedAt: nullToUndefined(row.completed_at as string | null),
-		createdAt: row.created_at as string,
-	};
-}
-
-function rowToAgentRun(row: Record<string, unknown>): AgentRunRecord {
-	return {
-		id: row.id as string,
-		pipelineRunId: row.pipeline_run_id as string,
-		agentName: row.agent_name as string,
-		phase: row.phase as number,
-		nodeName: row.node_name as string,
-		status: row.status as AgentRunRecord["status"],
-		inputArtifactIds: JSON.parse(row.input_artifact_ids as string),
-		outputArtifactIds: JSON.parse(row.output_artifact_ids as string),
-		tokenUsage: row.token_usage
-			? JSON.parse(row.token_usage as string)
-			: undefined,
-		provider: nullToUndefined(row.provider as string | null),
-		modelName: nullToUndefined(row.model_name as string | null),
-		costUsd: nullToUndefined(row.cost_usd as number | null),
-		durationMs: nullToUndefined(row.duration_ms as number | null),
-		error: nullToUndefined(row.error as string | null),
-		revisionNotes: nullToUndefined(row.revision_notes as string | null),
-		retryCount: (row.retry_count as number) ?? 0,
-		recoveryToken: nullToUndefined(row.recovery_token as string | null),
-		lastStatusAt: nullToUndefined(row.last_status_at as string | null),
-		statusMessage: nullToUndefined(row.status_message as string | null),
-		startedAt: row.started_at as string,
-		completedAt: nullToUndefined(row.completed_at as string | null),
-		createdAt: row.created_at as string,
-	};
-}
-
-function rowToNode(row: Record<string, unknown>): NodeRecord {
-	return {
-		name: row.name as string,
-		type: row.type as string,
-		capabilities: JSON.parse(row.capabilities as string),
-		maxConcurrentRuns: nullToUndefined(
-			row.max_concurrent_runs as number | null,
-		),
-		status: row.status as NodeRecord["status"],
-		activeRuns: row.active_runs as number,
-		lastHeartbeat: nullToUndefined(row.last_heartbeat as string | null),
-		updatedAt: row.updated_at as string,
-	};
-}
-
-function rowToGate(row: Record<string, unknown>): Gate {
-	return {
-		id: row.id as string,
-		pipelineRunId: row.pipeline_run_id as string,
-		phaseCompleted: row.phase_completed as number,
-		phaseNext: row.phase_next as number,
-		status: row.status as Gate["status"],
-		reviewer: nullToUndefined(row.reviewer as string | null),
-		comment: nullToUndefined(row.comment as string | null),
-		revisionNotes: nullToUndefined(row.revision_notes as string | null),
-		artifactVersionIds: JSON.parse(row.artifact_version_ids as string),
-		crossCuttingFindings: row.cross_cutting_findings
-			? JSON.parse(row.cross_cutting_findings as string)
-			: undefined,
-		version: (row.version as number) ?? 1,
-		decidedAt: nullToUndefined(row.decided_at as string | null),
-		createdAt: row.created_at as string,
-	};
-}
-
-function rowToExecutionLog(row: Record<string, unknown>): ExecutionLog {
-	const metadataRaw = row.metadata as string | null;
-	return {
-		id: row.id as string,
-		agentRunId: row.agent_run_id as string,
-		level: row.level as string,
-		message: row.message as string,
-		metadata: metadataRaw
-			? (JSON.parse(metadataRaw) as Record<string, unknown>)
-			: undefined,
-		timestamp: row.timestamp as string,
-	};
-}
-
-function rowToAuditLog(
-	row: Record<string, unknown>,
-): import("../domain/ports/state-store.port.js").AuditLog {
-	const metadataRaw = row.metadata as string | null;
-	return {
-		id: row.id as string,
-		pipelineRunId: row.pipeline_run_id as string,
-		actor: row.actor as string,
-		action: row.action as string,
-		resourceType: row.resource_type as string,
-		resourceId: row.resource_id as string,
-		metadata: metadataRaw ? JSON.parse(metadataRaw) : undefined,
-		createdAt: row.created_at as string,
-	};
-}
+// Row mappers live in ./row-mappers.js and are shared with PostgresStateStore
+// so column-to-field mapping stays in one place. Earlier this file kept a
+// parallel inline copy that drifted (exit_reason wasn't mapped) — don't
+// reintroduce that split.

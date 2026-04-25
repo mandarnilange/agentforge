@@ -1,0 +1,102 @@
+name: Bug report
+description: Something that should work but doesn't.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in the
+        sections below — concrete details make the issue *much* easier
+        to reproduce and fix.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: A clear, concise description of what went wrong.
+      placeholder: When I run `agentforge run ...`, the pipeline hangs at the first gate without emitting a status event.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, self-contained steps. Share the agent / pipeline YAML if relevant.
+      placeholder: |
+        1. `agentforge init --template simple-sdlc`
+        2. Apply this agent YAML: …
+        3. Run: `agentforge run --project foo --pipeline simple-sdlc`
+        4. Observe: …
+      render: markdown
+    validations:
+      required: true
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: Which package?
+      options:
+        - agentforge-core (framework)
+        - agentforge (platform)
+        - both / unsure
+        - docker image
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `agentforge --version` or `agentforge-core --version`.
+      placeholder: "0.2.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: state-store
+    attributes:
+      label: State store
+      options:
+        - SQLite (default)
+        - PostgreSQL
+    validations:
+      required: true
+
+  - type: input
+    id: node
+    attributes:
+      label: Node version
+      placeholder: "20.11.1"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: "macOS 14.5 / Ubuntu 22.04 / ..."
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / traces
+      description: |
+        Redact any secrets before pasting. If the logs are long, please use a
+        gist or code block. If you have OTel traces, a Jaeger URL or screenshot
+        is gold.
+      render: shell
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Config nuances, custom executors, anything you've already ruled out.

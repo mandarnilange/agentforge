@@ -1,0 +1,57 @@
+name: Feature request
+description: Propose a new capability or an improvement to an existing one.
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing an idea. Before filing, please check if it's
+        already covered in [`ROADMAP.md`](https://github.com/mandarnilange/agentforge/blob/main/ROADMAP.md)
+        or in existing issues / discussions.
+
+        For architectural changes (new YAML kinds, new executors, new
+        deployment topologies), a short design sketch helps us decide
+        scope early.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: The user-facing gap or friction you're hitting today. "X is hard / impossible" is more useful than "AgentForge should have Y".
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Rough shape of the feature. YAML examples, command-line flags, API signatures — whatever's appropriate.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Did you try other approaches or tools? Why didn't they work?
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Which layer?
+      options:
+        - agentforge-core (framework)
+        - agentforge (platform)
+        - dashboard UI
+        - templates / docs
+        - CI / release / packaging
+        - unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Links to prior art, related issues, or references.

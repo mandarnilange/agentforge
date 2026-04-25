@@ -1,5 +1,7 @@
 # Pipeline Execution Flows
 
+> Part of the [AgentForge documentation](README.md).
+
 Complete reference for how pipelines start, execute, produce artifacts, and handle gates.
 
 ---

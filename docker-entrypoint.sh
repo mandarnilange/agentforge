@@ -44,10 +44,23 @@ case "$CMD" in
       echo "ERROR: CONTROL_PLANE_URL env var is required for worker mode."
       exit 1
     fi
-    echo "Starting worker node connecting to ${CONTROL_PLANE_URL}..."
-    exec node packages/platform/dist/platform-cli.js node start \
+    # Optional worker identity + capability overrides.
+    # Lets you run heterogeneous worker pools (e.g. a Docker-capable
+    # worker next to a plain llm-access worker) from the same image.
+    set -- node packages/platform/dist/platform-cli.js node start \
       --control-plane-url "$CONTROL_PLANE_URL" \
       --token "${AGENTFORGE_NODE_SECRET:-}"
+    if [ -n "${NODE_NAME:-}" ]; then
+      set -- "$@" --name "$NODE_NAME"
+    fi
+    if [ -n "${NODE_CAPABILITIES:-}" ]; then
+      set -- "$@" --capabilities "$NODE_CAPABILITIES"
+    fi
+    if [ -n "${NODE_MAX_CONCURRENT_RUNS:-}" ]; then
+      set -- "$@" --max-concurrent-runs "$NODE_MAX_CONCURRENT_RUNS"
+    fi
+    echo "Starting worker node connecting to ${CONTROL_PLANE_URL}${NODE_NAME:+ as ${NODE_NAME}}..."
+    exec "$@"
     ;;
 
   *)

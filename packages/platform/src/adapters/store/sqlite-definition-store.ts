@@ -5,6 +5,9 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type {
 	AgentDefinitionYaml,
 	NodeDefinitionYaml,
@@ -17,6 +20,56 @@ export type DefinitionKind =
 	| "AgentDefinition"
 	| "PipelineDefinition"
 	| "NodeDefinition";
+
+const SCHEMA_MIGRATIONS_DDL = `
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version TEXT PRIMARY KEY,
+  applied_at TEXT NOT NULL
+);
+`;
+
+// Resolves to dist/state/migrations/sqlite at runtime and
+// src/state/migrations/sqlite in tests/dev. Kept in sync by
+// scripts/copy-build-assets.mjs.
+const DEFINITIONS_MIGRATIONS_DIR = join(
+	dirname(fileURLToPath(import.meta.url)),
+	"..",
+	"..",
+	"state",
+	"migrations",
+	"sqlite",
+);
+
+function applySqliteMigrationsSync(
+	db: Database.Database,
+	migrationsDir: string,
+): void {
+	const runSql: (sql: string) => void = db.exec.bind(db);
+	runSql(SCHEMA_MIGRATIONS_DDL);
+	const applied = new Set(
+		(
+			db.prepare("SELECT version FROM schema_migrations").all() as Array<{
+				version: string;
+			}>
+		).map((r) => r.version),
+	);
+	let entries: string[];
+	try {
+		entries = readdirSync(migrationsDir);
+	} catch {
+		return;
+	}
+	const files = entries.filter((f) => f.endsWith(".sql")).sort();
+	for (const name of files) {
+		const version = name.slice(0, -".sql".length);
+		if (applied.has(version)) continue;
+		const sql = readFileSync(join(migrationsDir, name), "utf-8");
+		runSql(sql);
+		db.prepare(
+			"INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)",
+		).run(version, new Date().toISOString());
+	}
+}
 
 export interface ResourceDefinition {
 	id: string;
@@ -39,33 +92,6 @@ export interface ResourceDefinitionHistory {
 	createdAt: string;
 }
 
-const DEFINITION_SCHEMA = `
-CREATE TABLE IF NOT EXISTS resource_definitions (
-  id TEXT PRIMARY KEY,
-  kind TEXT NOT NULL,
-  name TEXT NOT NULL,
-  version INTEGER NOT NULL DEFAULT 1,
-  spec_yaml TEXT NOT NULL,
-  metadata TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  UNIQUE(kind, name)
-);
-
-CREATE TABLE IF NOT EXISTS resource_definition_history (
-  id TEXT PRIMARY KEY,
-  definition_id TEXT NOT NULL,
-  version INTEGER NOT NULL,
-  spec_yaml TEXT NOT NULL,
-  changed_by TEXT NOT NULL,
-  change_type TEXT NOT NULL,
-  created_at TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_def_kind_name ON resource_definitions(kind, name);
-CREATE INDEX IF NOT EXISTS idx_def_history_def ON resource_definition_history(definition_id);
-`;
-
 export class SqliteDefinitionStore {
 	private readonly db: Database.Database;
 
@@ -73,7 +99,7 @@ export class SqliteDefinitionStore {
 		this.db = new Database(dbPath);
 		this.db.pragma("journal_mode = WAL");
 		this.db.pragma("foreign_keys = ON");
-		this.db.exec(DEFINITION_SCHEMA);
+		applySqliteMigrationsSync(this.db, DEFINITIONS_MIGRATIONS_DIR);
 	}
 
 	create(
@@ -180,9 +206,26 @@ export class SqliteDefinitionStore {
 	): ResourceDefinition {
 		const existing = this.get(kind, name);
 		if (existing) {
+			// Byte-identical spec → no-op. Boot loops upsert every YAML on
+			// every restart; without this guard each restart would bump
+			// version + write a history row for every unchanged definition.
+			if (existing.specYaml === specYaml) return existing;
 			return this.update(kind, name, specYaml, changedBy);
 		}
-		return this.create(kind, name, specYaml, changedBy);
+		try {
+			return this.create(kind, name, specYaml, changedBy);
+		} catch (err) {
+			// Concurrent-create race (multiple processes against the same DB
+			// file): SQLite raises SQLITE_CONSTRAINT_UNIQUE. Re-fetch + resolve.
+			if (isSqliteUniqueViolation(err)) {
+				const racy = this.get(kind, name);
+				if (racy) {
+					if (racy.specYaml === specYaml) return racy;
+					return this.update(kind, name, specYaml, changedBy);
+				}
+			}
+			throw err;
+		}
 	}
 
 	delete(kind: DefinitionKind, name: string, changedBy: string): void {
@@ -326,6 +369,16 @@ export class SqliteDefinitionStore {
 			return undefined;
 		}
 	}
+}
+
+function isSqliteUniqueViolation(err: unknown): boolean {
+	if (typeof err !== "object" || err === null) return false;
+	const e = err as { code?: unknown; message?: unknown };
+	return (
+		e.code === "SQLITE_CONSTRAINT_UNIQUE" ||
+		e.code === "SQLITE_CONSTRAINT" ||
+		(typeof e.message === "string" && e.message.includes("UNIQUE constraint"))
+	);
 }
 
 function rowToDefinition(row: Record<string, unknown>): ResourceDefinition {

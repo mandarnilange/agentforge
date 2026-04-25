@@ -1,8 +1,10 @@
 # Testing Guide
 
+> Part of the [AgentForge documentation](README.md).
+
 This guide covers how to test AgentForge — from unit tests through to running a real pipeline with an actual API key.
 
-All examples use the bundled `simple-sdlc` template's three agents: `analyst`, `architect`, `developer`. Swap in your own agent names once you've scaffolded a project with `agentforge-core init`.
+All examples use the bundled `simple-sdlc` template's three agents: `analyst`, `architect`, `developer`. Swap in your own agent names once you've scaffolded a project with `agentforge init`.
 
 ---
 
@@ -47,7 +49,7 @@ Validates CLI wiring, config loading, and agent registration without calling the
 
 ```bash
 # Scaffold the simple-sdlc template into .agentforge/
-npx agentforge-core init --template simple-sdlc
+npx agentforge init --template simple-sdlc
 
 # Dry run any agent
 npx tsx packages/core/src/cli/index.ts exec analyst --input "Build a SaaS invoicing app" --dry-run
@@ -297,12 +299,49 @@ ls ./output/test-run/    # + code-output.json
 
 ---
 
+## 11. Multi-worker Validation
+
+Two layers — one in-process (always runs), one against real Docker (opt-in).
+
+### In-process HTTP dispatch test
+
+Boots a real control-plane HTTP server and attaches three in-process polling
+workers that register/heartbeat/poll/report-results via `fetch` — the same
+protocol the `docker-entrypoint.sh worker` path uses in production. Covers
+concurrency, capability routing, and silent-drop protection.
+
+```bash
+npx vitest run packages/platform/tests/integration/multi-worker.test.ts
+```
+
+No Docker daemon, no API key — runs as part of `npm test`.
+
+### Docker Compose smoke test
+
+Brings up `postgres` + `control-plane` + three heterogeneous workers
+(different names, capabilities, concurrency caps) under Docker Compose and
+asserts each one registers, advertises the right capabilities, and
+heartbeats within the last 30s. Gated behind an explicit shell invocation;
+**not** wired into `npm test`.
+
+```bash
+./packages/platform/tests/docker/multi-worker-smoke.sh
+```
+
+Requires `docker compose` v2, `jq`, `curl`. First run builds the image —
+expect ~2 minutes. No LLM key needed; the workers just register and idle.
+
+For full pipeline validation across multiple workers, run the stack with a
+real `ANTHROPIC_API_KEY` and use `agentforge run` per the sections above.
+
+---
+
 ## Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
 | `Error: ANTHROPIC_API_KEY is required` | `export ANTHROPIC_API_KEY=sk-ant-...` |
-| `Unknown agent: "xyz"` | Run `agentforge-core list` to see valid IDs in your `.agentforge/` scaffold |
+| `Unknown agent: "xyz"` | Run `agentforge list` to see valid IDs in your `.agentforge/` scaffold |
 | Empty artifacts (`{}`) | Check `--verbose` output; LLM may have returned malformed JSON |
 | Pipeline stuck at gate | Run `get gates --pipeline <id>` to find pending gate ID, then `gate approve <id>` |
 | State DB locked | Another process has the DB open; kill it or wait |

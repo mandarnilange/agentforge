@@ -1,5 +1,7 @@
 # AgentForge Templates
 
+> Part of the [AgentForge documentation](README.md).
+
 Templates are pre-built agent pipelines for common workflows. Run `agentforge init --template <name>` to scaffold a complete `.agentforge/` directory and start running pipelines immediately.
 
 ## Available Templates

@@ -1,0 +1,94 @@
+## Heterogeneous-worker fixture for the multi-worker smoke test.
+## Three workers with distinct names + capabilities + concurrency caps,
+## all talking to the same control plane.
+##
+## Usage — see tests/docker/multi-worker-smoke.sh.
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: agentforge
+      POSTGRES_USER: agentforge
+      POSTGRES_PASSWORD: agentforge_smoke
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentforge -d agentforge"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+
+  control-plane:
+    build:
+      context: ../../../..
+      dockerfile: Dockerfile
+      target: platform
+    command: dashboard
+    ports:
+      - "${SMOKE_PORT:-3099}:3001"
+    environment:
+      PORT: 3001
+      AGENTFORGE_OUTPUT_DIR: /app/output
+      AGENTFORGE_STATE_STORE: postgres
+      AGENTFORGE_POSTGRES_URL: postgres://agentforge:agentforge_smoke@postgres:5432/agentforge
+      AGENTFORGE_NODE_SECRET: ${AGENTFORGE_NODE_SECRET:-smoke-secret}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-sk-fake-smoke-no-llm-calls}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/health').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  worker-docker:
+    build:
+      context: ../../../..
+      dockerfile: Dockerfile
+      target: platform
+    command: worker
+    environment:
+      CONTROL_PLANE_URL: http://control-plane:3001
+      AGENTFORGE_NODE_SECRET: ${AGENTFORGE_NODE_SECRET:-smoke-secret}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-sk-fake-smoke-no-llm-calls}
+      NODE_NAME: worker-docker
+      NODE_CAPABILITIES: llm-access,docker
+      NODE_MAX_CONCURRENT_RUNS: "4"
+    depends_on:
+      control-plane:
+        condition: service_healthy
+
+  worker-gpu:
+    build:
+      context: ../../../..
+      dockerfile: Dockerfile
+      target: platform
+    command: worker
+    environment:
+      CONTROL_PLANE_URL: http://control-plane:3001
+      AGENTFORGE_NODE_SECRET: ${AGENTFORGE_NODE_SECRET:-smoke-secret}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-sk-fake-smoke-no-llm-calls}
+      NODE_NAME: worker-gpu
+      NODE_CAPABILITIES: llm-access,gpu,high-memory
+      NODE_MAX_CONCURRENT_RUNS: "2"
+    depends_on:
+      control-plane:
+        condition: service_healthy
+
+  worker-plain:
+    build:
+      context: ../../../..
+      dockerfile: Dockerfile
+      target: platform
+    command: worker
+    environment:
+      CONTROL_PLANE_URL: http://control-plane:3001
+      AGENTFORGE_NODE_SECRET: ${AGENTFORGE_NODE_SECRET:-smoke-secret}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-sk-fake-smoke-no-llm-calls}
+      NODE_NAME: worker-plain
+      NODE_CAPABILITIES: llm-access
+      NODE_MAX_CONCURRENT_RUNS: "3"
+    depends_on:
+      control-plane:
+        condition: service_healthy

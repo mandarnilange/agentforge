@@ -1,5 +1,7 @@
 # Multi-Provider Execution
 
+> Part of the [AgentForge documentation](README.md).
+
 AgentForge supports multiple LLM providers via the `agentforge` package. Core (`agentforge-core`) stays Anthropic-only; platform adds provider-aware middleware for OpenAI, Google Gemini, and Ollama.
 
 ## Key Concept: Executor vs Provider

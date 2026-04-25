@@ -35,6 +35,16 @@ const jobs = [
 		filter: (src) => onlyAssets(src),
 	},
 	{
+		label: "core sql migrations",
+		src: resolve(repoRoot, "packages/core/src/state/migrations"),
+		dest: resolve(repoRoot, "packages/core/dist/state/migrations"),
+	},
+	{
+		label: "platform sql migrations",
+		src: resolve(repoRoot, "packages/platform/src/state/migrations"),
+		dest: resolve(repoRoot, "packages/platform/dist/state/migrations"),
+	},
+	{
 		label: "dashboard SPA",
 		src: resolve(repoRoot, "packages/core/src/dashboard/dist"),
 		dest: resolve(repoRoot, "packages/core/dist/dashboard/app"),
