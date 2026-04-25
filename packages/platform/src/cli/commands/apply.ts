@@ -39,8 +39,11 @@ export interface DefinitionPersistSink {
  * not, in PG/multi-host deployments).
  *
  * Tries candidates in order: file path as given, then under
- * `<templateRoot>/prompts/<file>`. If neither exists, leaves the agent
- * untouched and prints a warning so the user can fix it.
+ * `<templateRoot>/prompts/<file>`. If neither exists, throws so apply
+ * exits non-zero — silently persisting an agent with an unresolvable
+ * prompt would just produce a runtime-time failure later, harder to
+ * diagnose. Future: a `Prompt` resource kind so prompts can be applied
+ * + referenced by name (see ROADMAP).
  */
 function inlinePromptIfFile(
 	agent: AgentDefinitionYaml,
@@ -65,10 +68,14 @@ function inlinePromptIfFile(
 			};
 		}
 	}
-	console.warn(
-		`apply: prompt file '${promptFile}' not found for agent '${agent.metadata.name}' (looked under ${templateRoot}). The agent will be persisted as-is; runtime will fall back to filesystem lookup.`,
+	throw new Error(
+		`apply: prompt file '${promptFile}' for agent '${agent.metadata.name}' was not found. ` +
+			`Looked under:\n` +
+			candidates.map((c) => `  ${c}`).join("\n") +
+			`\nFix: either ship the prompt file alongside the agent yaml ` +
+			`(typically under \`prompts/${promptFile}\`), or replace ` +
+			`\`systemPrompt.file\` with inline \`systemPrompt.text\` in the agent yaml.`,
 	);
-	return agent;
 }
 
 function readSingleSchema(path: string): SchemaResource | null {
