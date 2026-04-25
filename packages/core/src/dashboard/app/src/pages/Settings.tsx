@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api, type ResourceDef } from "../api/client";
 
-type SettingsTab = "agents" | "pipelines" | "nodes";
+type SettingsTab = "agents" | "pipelines" | "nodes" | "schemas";
 
 const TAB_CONFIG: Record<
 	SettingsTab,
@@ -38,6 +38,14 @@ const TAB_CONFIG: Record<
 		detailKey: "node-def",
 		list: () => api.listNodeDefs(),
 		detail: (name) => api.getNodeDef(name),
+	},
+	schemas: {
+		label: "Schema",
+		itemLabel: "schema",
+		listKey: "schema-defs",
+		detailKey: "schema-def",
+		list: () => api.listSchemaDefs(),
+		detail: (name) => api.getSchemaDef(name),
 	},
 };
 

@@ -72,7 +72,10 @@ vi.mock("@mariozechner/pi-coding-agent", () => {
 });
 
 import { getModel } from "@mariozechner/pi-ai";
-import { PiCodingAgentExecutionBackend } from "../../src/adapters/execution/pi-coding-agent-backend.js";
+import {
+	PiCodingAgentExecutionBackend,
+	stringifyToolPayload,
+} from "../../src/adapters/execution/pi-coding-agent-backend.js";
 
 const mockedGetModel = vi.mocked(getModel);
 
@@ -1104,5 +1107,45 @@ describe("PiCodingAgentExecutionBackend", () => {
 			expect(callCount).toBe(1);
 			expect(result.events[0].kind).toBe("error");
 		});
+	});
+});
+
+describe("stringifyToolPayload", () => {
+	it("passes strings through unchanged", () => {
+		expect(stringifyToolPayload("hello")).toBe("hello");
+	});
+
+	it("JSON-stringifies plain objects (no [object Object])", () => {
+		const out = stringifyToolPayload({
+			type: "text",
+			text: "the result body",
+		});
+		expect(out).not.toBe("[object Object]");
+		expect(JSON.parse(out)).toEqual({ type: "text", text: "the result body" });
+	});
+
+	it("JSON-stringifies arrays (e.g. Anthropic-style content blocks)", () => {
+		const out = stringifyToolPayload([
+			{ type: "text", text: "block 1" },
+			{ type: "text", text: "block 2" },
+		]);
+		expect(out).not.toBe("[object Object]");
+		expect(JSON.parse(out)).toHaveLength(2);
+	});
+
+	it("returns empty string for null / undefined", () => {
+		expect(stringifyToolPayload(null)).toBe("");
+		expect(stringifyToolPayload(undefined)).toBe("");
+	});
+
+	it("renders numbers and booleans as their string form", () => {
+		expect(stringifyToolPayload(42)).toBe("42");
+		expect(stringifyToolPayload(true)).toBe("true");
+	});
+
+	it("falls back to a marker for circular structures", () => {
+		const a: Record<string, unknown> = {};
+		a.self = a;
+		expect(stringifyToolPayload(a)).toBe("[unserializable tool result]");
 	});
 });

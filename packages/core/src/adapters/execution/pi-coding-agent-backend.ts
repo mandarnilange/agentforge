@@ -213,7 +213,10 @@ export class PiCodingAgentExecutionBackend implements IExecutionBackend {
 				});
 			} else if (event.type === "tool_execution_end") {
 				const raw = event as unknown as Record<string, unknown>;
-				const result = String(raw.output ?? raw.result ?? "").slice(0, 500);
+				const result = stringifyToolPayload(raw.output ?? raw.result).slice(
+					0,
+					500,
+				);
 				const toolSpan = activeToolSpans.pop();
 				if (toolSpan) {
 					toolSpan.setAttribute("tool.result", result);
@@ -597,4 +600,25 @@ function validateExtensionPaths(extensions: readonly string[]): string | null {
 		}
 	}
 	return null;
+}
+
+/**
+ * Render a tool-execution payload as a string suitable for the
+ * conversationLog entry. Objects/arrays JSON-stringify (so the dashboard
+ * sees real content instead of "[object Object]" via implicit toString
+ * coercion); strings pass through; null/undefined become empty strings.
+ */
+export function stringifyToolPayload(value: unknown): string {
+	if (value === null || value === undefined) return "";
+	if (typeof value === "string") return value;
+	if (typeof value === "number" || typeof value === "boolean") {
+		return String(value);
+	}
+	try {
+		return JSON.stringify(value, null, 2);
+	} catch {
+		// Circular or otherwise non-serializable — fall back to a marker
+		// instead of leaking the toString default.
+		return "[unserializable tool result]";
+	}
 }

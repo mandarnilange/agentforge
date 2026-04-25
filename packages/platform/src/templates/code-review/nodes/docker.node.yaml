@@ -9,6 +9,6 @@ spec:
   capabilities: [docker, git, llm-access]
   image: node:20-slim
   resources:
-    maxConcurrentAgents: 4
+    maxConcurrentRuns: 4
     memory: 2g
     cpu: "2"

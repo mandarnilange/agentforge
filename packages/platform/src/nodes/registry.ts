@@ -93,7 +93,9 @@ export class NodeRegistry {
 		const record: NodeRecord = {
 			name: node.definition.metadata.name,
 			type:
-				node.definition.metadata.type ?? node.definition.spec.connection.type,
+				node.definition.metadata.type ??
+				node.definition.spec.connection?.type ??
+				"local",
 			capabilities: node.definition.spec.capabilities,
 			maxConcurrentRuns: node.definition.spec.resources?.maxConcurrentRuns,
 			status: node.status,

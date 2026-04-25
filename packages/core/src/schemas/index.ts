@@ -215,6 +215,26 @@ export function resetDiscoveredSchemas(): void {
 	discoveredSchemas = new Map();
 }
 
+/**
+ * List the names of every schema currently registered (from PG, SQLite,
+ * or `.agentforge/schemas/`). Names are the artifact-type keys used by
+ * `getValidatorForType()`.
+ */
+export function listDiscoveredSchemas(): string[] {
+	return [...discoveredSchemas.keys()].sort();
+}
+
+/**
+ * Get a registered schema by name, returning the JSON Schema body for
+ * dashboard display. Built-in Zod fallbacks aren't returned here — those
+ * have no JSON Schema form to surface.
+ */
+export function getDiscoveredSchema(
+	name: string,
+): Record<string, unknown> | undefined {
+	return discoveredSchemas.get(name)?.jsonSchema;
+}
+
 export function getValidatorForType(
 	artifactType: string,
 ): SchemaValidator | undefined {

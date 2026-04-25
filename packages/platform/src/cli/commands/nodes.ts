@@ -33,7 +33,9 @@ export function registerNodesCommands(
 			for (const n of nodes) {
 				const name = n.definition.metadata.name.padEnd(16);
 				const type = (
-					n.definition.metadata.type ?? n.definition.spec.connection.type
+					n.definition.metadata.type ??
+					n.definition.spec.connection?.type ??
+					"local"
 				).padEnd(10);
 				const statusColor =
 					n.status === "online"
@@ -67,14 +69,16 @@ export function registerNodesCommands(
 			console.log(chalk.bold(`\nNode: ${def.metadata.name}`));
 			if (def.metadata.displayName)
 				console.log(`  Display Name:   ${def.metadata.displayName}`);
-			console.log(
-				`  Type:           ${def.metadata.type ?? def.spec.connection.type}`,
-			);
-			console.log(`  Connection:     ${def.spec.connection.type}`);
-			if (def.spec.connection.host)
-				console.log(`  Host:           ${def.spec.connection.host}`);
-			if (def.spec.connection.user)
-				console.log(`  User:           ${def.spec.connection.user}`);
+			const connType =
+				def.metadata.type ?? def.spec.connection?.type ?? "unknown";
+			console.log(`  Type:           ${connType}`);
+			if (def.spec.connection) {
+				console.log(`  Connection:     ${def.spec.connection.type}`);
+				if (def.spec.connection.host)
+					console.log(`  Host:           ${def.spec.connection.host}`);
+				if (def.spec.connection.user)
+					console.log(`  User:           ${def.spec.connection.user}`);
+			}
 			console.log(`  Capabilities:   ${def.spec.capabilities.join(", ")}`);
 			if (def.spec.resources?.maxConcurrentRuns != null)
 				console.log(

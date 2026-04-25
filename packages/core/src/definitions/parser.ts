@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, type Stats, statSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
@@ -312,39 +312,143 @@ export function parseDefinitionFile(filePath: string): ParsedDefinition {
 	}
 }
 
+/**
+ * A JSON-Schema body associated with a named artifact type. Schemas live
+ * alongside agents / pipelines / nodes in template directories under
+ * `schemas/<artifact-type>.schema.yaml` and validate agent outputs at
+ * phase boundaries.
+ *
+ * The `name` is derived from the filename (e.g. `api-spec.schema.yaml`
+ * → `api-spec`) and matches the agent yaml's `outputs[].type`.
+ */
+export interface SchemaResource {
+	readonly name: string;
+	readonly source: string;
+	readonly schema: Record<string, unknown>;
+}
+
 export interface LoadedDefinitions {
 	agents: AgentDefinitionYaml[];
 	pipelines: PipelineDefinitionYaml[];
 	nodes: NodeDefinitionYaml[];
+	schemas: SchemaResource[];
 }
 
+/**
+ * Recursively load every AgentDefinition / PipelineDefinition /
+ * NodeDefinition YAML under `dir`. Designed so users can pass a template
+ * root (e.g. `.../api-builder`) and have agents/, pipelines/, nodes/
+ * picked up in one call.
+ *
+ * Tolerant of non-definition YAMLs that may live alongside (e.g.
+ * `schemas/*.schema.yaml` are JSON-Schema documents, not AgentForge
+ * resources). We sniff `apiVersion: agentforge/v1` + a known `kind`
+ * before parsing; mismatches are skipped silently. Files that DO claim
+ * to be a definition but fail validation still throw — surfaced to the
+ * user so they catch real schema bugs.
+ */
 export function loadDefinitionsFromDir(dir: string): LoadedDefinitions {
 	const result: LoadedDefinitions = {
 		agents: [],
 		pipelines: [],
 		nodes: [],
+		schemas: [],
 	};
 
-	const files = readdirSync(dir).filter(
-		(f) => f.endsWith(".yaml") || f.endsWith(".yml"),
-	);
-
-	for (const file of files) {
-		const filePath = join(dir, file);
-		const def = parseDefinitionFile(filePath);
-
-		switch (def.kind) {
-			case "AgentDefinition":
-				result.agents.push(def);
-				break;
-			case "PipelineDefinition":
-				result.pipelines.push(def);
-				break;
-			case "NodeDefinition":
-				result.nodes.push(def);
-				break;
+	const isDefinitionYaml = (filePath: string): boolean => {
+		try {
+			const raw = parseYaml(readFileSync(filePath, "utf-8")) as
+				| Record<string, unknown>
+				| null
+				| undefined;
+			if (!raw || typeof raw !== "object") return false;
+			if (raw.apiVersion !== "agentforge/v1") return false;
+			return (
+				raw.kind === "AgentDefinition" ||
+				raw.kind === "PipelineDefinition" ||
+				raw.kind === "NodeDefinition"
+			);
+		} catch {
+			return false;
 		}
-	}
+	};
 
+	const tryReadSchema = (
+		filePath: string,
+		fileName: string,
+	): SchemaResource | null => {
+		try {
+			const raw = readFileSync(filePath, "utf-8");
+			const parsed = fileName.endsWith(".schema.json")
+				? JSON.parse(raw)
+				: parseYaml(raw);
+			if (!parsed || typeof parsed !== "object") return null;
+			// Heuristic: a JSON Schema body at minimum has a `type` field or
+			// `$schema` declaration. We accept either. Definition envelopes
+			// (kind: ...) are excluded here — they're caught above.
+			const obj = parsed as Record<string, unknown>;
+			if ("kind" in obj && "apiVersion" in obj) return null;
+			const looksLikeSchema =
+				"$schema" in obj || "type" in obj || "properties" in obj;
+			if (!looksLikeSchema) return null;
+			const suffix = fileName.endsWith(".schema.json")
+				? ".schema.json"
+				: ".schema.yaml";
+			const name = fileName.slice(0, -suffix.length);
+			return { name, source: filePath, schema: obj };
+		} catch {
+			return null;
+		}
+	};
+
+	const visit = (currentDir: string): void => {
+		let names: string[];
+		try {
+			names = readdirSync(currentDir);
+		} catch {
+			return;
+		}
+		for (const name of names) {
+			const full = join(currentDir, name);
+			let stats: Stats;
+			try {
+				stats = statSync(full);
+			} catch {
+				continue;
+			}
+			if (stats.isDirectory()) {
+				visit(full);
+				continue;
+			}
+			if (!stats.isFile()) continue;
+
+			// Schema files (*.schema.yaml / *.schema.json) — collect
+			// regardless of envelope. Anything else is checked for the
+			// AgentForge definition envelope.
+			if (name.endsWith(".schema.yaml") || name.endsWith(".schema.json")) {
+				const schema = tryReadSchema(full, name);
+				if (schema) result.schemas.push(schema);
+				continue;
+			}
+
+			if (!name.endsWith(".yaml") && !name.endsWith(".yml")) continue;
+			if (!isDefinitionYaml(full)) continue;
+			const def = parseDefinitionFile(full);
+
+			switch (def.kind) {
+				case "AgentDefinition":
+					result.agents.push(def);
+					break;
+				case "PipelineDefinition":
+					result.pipelines.push(def);
+					break;
+				case "NodeDefinition":
+					result.nodes.push(def);
+					break;
+			}
+		}
+	};
+
+	visit(dir);
 	return result;
 }

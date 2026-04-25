@@ -80,6 +80,14 @@ describe("sdlc-agent apply command", () => {
 	it("loads a single YAML file via apply", async () => {
 		const filePath = join(tmpDir, "analyst.agent.yaml");
 		writeFileSync(filePath, validAgentYaml);
+		// Apply now hard-fails if a `systemPrompt.file:` reference can't be
+		// resolved; ship the prompt content next to the yaml so apply can
+		// inline it (matches what users would do with a real template root).
+		mkdirSync(join(tmpDir, "prompts"), { recursive: true });
+		writeFileSync(
+			join(tmpDir, "prompts", "analyst.system.md"),
+			"You are an analyst.",
+		);
 
 		const program = new Command();
 		const store = createDefinitionStore();
@@ -94,6 +102,11 @@ describe("sdlc-agent apply command", () => {
 	it("loads a directory of YAML files via apply", async () => {
 		writeFileSync(join(tmpDir, "analyst.agent.yaml"), validAgentYaml);
 		writeFileSync(join(tmpDir, "pipeline.yaml"), validPipelineYaml);
+		mkdirSync(join(tmpDir, "prompts"), { recursive: true });
+		writeFileSync(
+			join(tmpDir, "prompts", "analyst.system.md"),
+			"You are an analyst.",
+		);
 
 		const program = new Command();
 		const store = createDefinitionStore();
@@ -168,5 +181,27 @@ spec:
 		await expect(
 			program.parseAsync(["apply", "-f", filePath], { from: "user" }),
 		).rejects.toThrow();
+	});
+
+	it("hard-fails apply when systemPrompt.file cannot be resolved", async () => {
+		// Agent yaml references prompts/analyst.system.md but that file is
+		// NOT staged. apply should refuse to persist instead of silently
+		// shipping an agent with an unresolvable prompt (which would just
+		// surface as a runtime error later).
+		const filePath = join(tmpDir, "analyst.agent.yaml");
+		writeFileSync(filePath, validAgentYaml);
+
+		const program = new Command();
+		const store = createDefinitionStore();
+		registerApplyCommand(program, store);
+
+		await expect(
+			program.parseAsync(["apply", "-f", filePath], { from: "user" }),
+		).rejects.toThrow(
+			/prompt file 'prompts\/analyst\.system\.md' .* not found/,
+		);
+
+		// And nothing was persisted on the way to the throw.
+		expect(store.listAgents()).toHaveLength(0);
 	});
 });

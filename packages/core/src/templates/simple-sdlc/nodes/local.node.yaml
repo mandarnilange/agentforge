@@ -11,4 +11,4 @@ spec:
     - git
     - llm-access
   resources:
-    maxConcurrentAgents: 2
+    maxConcurrentRuns: 2

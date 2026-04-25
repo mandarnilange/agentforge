@@ -6,6 +6,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { getRuntimeDefinitionStore } from "../agents/definition-source.js";
 import {
 	type AgentDefinitionYaml,
 	type NodeDefinitionYaml,
@@ -414,6 +415,13 @@ export class PipelineController {
 	}
 
 	private loadAgentDefFromDisk(agentName: string) {
+		// Runtime DefinitionStore (DB-backed in platform mode) wins over the
+		// filesystem fallback. Method name kept for git-blame continuity.
+		const runtime = getRuntimeDefinitionStore();
+		if (runtime) {
+			const def = runtime.getAgent(agentName);
+			return def ?? null;
+		}
 		try {
 			const content = readFileSync(
 				join(resolveAgentforgeDir(), "agents", `${agentName}.agent.yaml`),
@@ -447,6 +455,11 @@ export class PipelineController {
 	private loadPipelineDefFromDisk(
 		pipelineName: string,
 	): PipelineDefinitionYaml | null {
+		const runtime = getRuntimeDefinitionStore();
+		if (runtime) {
+			const def = runtime.getPipeline(pipelineName);
+			return def ?? null;
+		}
 		try {
 			const content = readFileSync(
 				join(

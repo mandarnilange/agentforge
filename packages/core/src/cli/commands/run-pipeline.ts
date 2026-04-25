@@ -8,7 +8,9 @@ import { join, resolve } from "node:path";
 import chalk from "chalk";
 import type { Command } from "commander";
 import ora from "ora";
+import { getRuntimeDefinitionStore } from "../../agents/definition-source.js";
 import type { PipelineController } from "../../control-plane/pipeline-controller.js";
+import type { PipelineDefinitionYaml } from "../../definitions/parser.js";
 import { parsePipelineDefinition } from "../../definitions/parser.js";
 import { resolveAgentforgeDir } from "../../di/agentforge-dir.js";
 import { loadConfig } from "../../di/config.js";
@@ -22,6 +24,31 @@ interface RunOptions {
 	pipeline?: string;
 	input?: string[];
 	continue?: string;
+}
+
+/**
+ * Resolve a pipeline definition by name. In platform mode the runtime
+ * DefinitionStore is the source of truth (fed from PG / SQLite via
+ * apply); in bare CLI mode we fall back to the filesystem lookup the
+ * pre-v0.2.0 CLI used.
+ */
+function resolvePipelineDefinition(
+	pipelineName: string,
+): PipelineDefinitionYaml | null {
+	const runtime = getRuntimeDefinitionStore();
+	if (runtime) {
+		const def = runtime.getPipeline(pipelineName);
+		return def ?? null;
+	}
+	const pipelinePath = resolve(
+		join(resolveAgentforgeDir(), "pipelines", `${pipelineName}.pipeline.yaml`),
+	);
+	if (!existsSync(pipelinePath)) return null;
+	try {
+		return parsePipelineDefinition(readFileSync(pipelinePath, "utf-8"));
+	} catch {
+		return null;
+	}
 }
 
 export function registerRunPipelineCommand(
@@ -84,22 +111,15 @@ export function registerRunPipelineCommand(
 				}
 
 				const pipelineName = existingRun.pipelineName;
-				const pipelinePath = resolve(
-					join(
-						resolveAgentforgeDir(),
-						"pipelines",
-						`${pipelineName}.pipeline.yaml`,
-					),
-				);
-				if (!existsSync(pipelinePath)) {
+				const pipelineDef = resolvePipelineDefinition(pipelineName);
+				if (!pipelineDef) {
 					console.error(
-						chalk.red(`Pipeline definition not found: ${pipelinePath}`),
+						chalk.red(
+							`Pipeline definition not found: "${pipelineName}". Run \`agentforge apply -f <path>\` first, or check .agentforge/pipelines/.`,
+						),
 					);
 					process.exit(1);
 				}
-				const pipelineDef = parsePipelineDefinition(
-					readFileSync(pipelinePath, "utf-8"),
-				);
 
 				// Check if there's a pending gate — if so, just resume the executor loop
 				// (it will detect paused_at_gate and wait). Don't re-schedule agents.
@@ -212,23 +232,15 @@ export function registerRunPipelineCommand(
 			}
 
 			const pipelineName = opts.pipeline ?? "simple-sdlc";
-			const pipelinePath = resolve(
-				join(
-					resolveAgentforgeDir(),
-					"pipelines",
-					`${pipelineName}.pipeline.yaml`,
-				),
-			);
-
-			if (!existsSync(pipelinePath)) {
+			const pipelineDef = resolvePipelineDefinition(pipelineName);
+			if (!pipelineDef) {
 				console.error(
-					chalk.red(`Pipeline definition not found: ${pipelinePath}`),
+					chalk.red(
+						`Pipeline definition not found: "${pipelineName}". Run \`agentforge apply -f <path>\` first, or check .agentforge/pipelines/.`,
+					),
 				);
 				process.exit(1);
 			}
-
-			const content = readFileSync(pipelinePath, "utf-8");
-			const pipelineDef = parsePipelineDefinition(content);
 
 			const inputs: Record<string, string> = {};
 			for (const kv of opts.input ?? []) {

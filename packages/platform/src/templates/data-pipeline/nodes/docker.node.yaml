@@ -8,6 +8,6 @@ spec:
   capabilities: [docker, git, llm-access]
   image: python:3.12-slim
   resources:
-    maxConcurrentAgents: 4
+    maxConcurrentRuns: 4
     memory: 4g
     cpu: "4"

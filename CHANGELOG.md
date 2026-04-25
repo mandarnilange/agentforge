@@ -3,6 +3,31 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0-rc.0] — Release candidate (npm name registration + early feedback)
+
+This is a release candidate for the first public release. It claims the
+`agentforge-core` and `agentforge` npm names and exposes the framework
+to early users for feedback before the v0.2.0 final tag.
+
+The complete feature set below is shipped and tested. Two limitations
+worth flagging for early adopters:
+
+- **`apply` requires the prompt file alongside the agent yaml.** If your
+  agent uses `spec.systemPrompt.file`, the file has to be reachable
+  relative to the yaml's directory (or under `<dir>/prompts/`). Apply
+  hard-fails with a clear error otherwise. Or use `spec.systemPrompt.text`
+  inline. Prompts becoming a first-class apply-able resource is on the
+  roadmap (`Prompt` kind, dashboard tab) — that lands in v0.3.
+- **Definition propagation across processes uses 5-second polling.** In
+  PG mode, an apply on one process becomes visible to other CP / worker
+  processes within ~5 seconds (configurable via
+  `AGENTFORGE_PG_DEFINITIONS_REFRESH_MS`). For high-throughput
+  multi-replica deployments where this is too coarse, the Postgres
+  `LISTEN/NOTIFY` push-based replacement is on the roadmap.
+
+Please file issues at https://github.com/mandarnilange/agentforge/issues
+or use Discussions for usage questions.
+
 ## [0.2.0] — First public release
 
 ### `agentforge-core` — the framework

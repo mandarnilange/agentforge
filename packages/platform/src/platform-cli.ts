@@ -9,6 +9,7 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { InMemoryEventBus } from "agentforge-core/adapters/events/in-memory-event-bus.js";
+import { setRuntimeDefinitionStore } from "agentforge-core/agents/definition-source.js";
 import { registerDashboardCommand } from "agentforge-core/cli/commands/dashboard.js";
 import { registerExecCommand } from "agentforge-core/cli/commands/exec.js";
 import { registerGateCommand } from "agentforge-core/cli/commands/gate.js";
@@ -31,6 +32,8 @@ import { loadDefinitionsFromDir } from "agentforge-core/definitions/parser.js";
 import type { DefinitionStore } from "agentforge-core/definitions/store.js";
 import { createDefinitionStore } from "agentforge-core/definitions/store.js";
 import { traceStateStore } from "agentforge-core/observability/traced-state-store.js";
+import { setDiscoveredSchemas } from "agentforge-core/schemas/index.js";
+import { buildSchemaValidators } from "agentforge-core/schemas/schema-discovery.js";
 import { SqliteStateStore } from "agentforge-core/state/store.js";
 import { Command } from "commander";
 import { PgDefinitionStore } from "./adapters/store/pg-definition-store.js";
@@ -158,14 +161,74 @@ if (USE_POSTGRES) {
 		pgKnownNodes.add(node.metadata.name);
 	}
 
+	// Schemas: compile bodies stored in PG (kind="Schema") into ajv
+	// validators and register globally so getValidatorForType() finds them.
+	{
+		const schemaRows = await pgStore.list("Schema");
+		const schemas = schemaRows.map((row) => ({
+			name: row.name,
+			schema: JSON.parse(row.specYaml) as Record<string, unknown>,
+		}));
+		setDiscoveredSchemas(buildSchemaValidators(schemas));
+	}
+
 	applyPersistSink = {
 		upsertAgent: (a, by) => pgStore.upsertAgent(a, by),
 		upsertPipeline: (p, by) => pgStore.upsertPipeline(p, by),
 		upsertNode: (n, by) => pgStore.upsertNode(n, by),
+		upsertSchema: (s, by) =>
+			pgStore.upsert("Schema", s.name, JSON.stringify(s.schema), by).then(),
 	};
 } else {
 	sqliteDefinitionStore = new SqliteDefinitionStore(DEFINITIONS_DB_PATH);
 	definitionStore = sqliteDefinitionStore.asLegacyStore();
+	// Even in SQLite mode we want apply to persist schemas so dashboard /
+	// re-runs see them. Goes through the same SqliteDefinitionStore as
+	// agents/pipelines/nodes; kind="Schema" is just another row.
+	const sqliteStore = sqliteDefinitionStore;
+	applyPersistSink = {
+		upsertAgent: async (a, by) => {
+			sqliteStore.upsert(
+				"AgentDefinition",
+				a.metadata.name,
+				JSON.stringify(a, null, 2),
+				by,
+			);
+		},
+		upsertPipeline: async (p, by) => {
+			sqliteStore.upsert(
+				"PipelineDefinition",
+				p.metadata.name,
+				JSON.stringify(p, null, 2),
+				by,
+			);
+		},
+		upsertNode: async (n, by) => {
+			sqliteStore.upsert(
+				"NodeDefinition",
+				n.metadata.name,
+				JSON.stringify(n, null, 2),
+				by,
+			);
+		},
+		upsertSchema: async (s, by) => {
+			sqliteStore.upsert("Schema", s.name, JSON.stringify(s.schema), by);
+		},
+	};
+	// Hydrate schema validators from the SQLite definition store at boot.
+	// Backwards compat: legacy filesystem schemas at .agentforge/schemas/
+	// continue to work via discoverSchemas() in di/container.ts; this layers
+	// on top so apply'd schemas are visible without restart.
+	{
+		const schemaRows = sqliteStore.list("Schema");
+		if (schemaRows.length > 0) {
+			const schemas = schemaRows.map((row) => ({
+				name: row.name,
+				schema: JSON.parse(row.specYaml) as Record<string, unknown>,
+			}));
+			setDiscoveredSchemas(buildSchemaValidators(schemas));
+		}
+	}
 }
 
 // Auto-load definitions from local .agentforge/.
@@ -175,28 +238,99 @@ if (USE_POSTGRES) {
 //   already persisted. To push edits to existing names, run `agentforge
 //   apply -f <path>` or use the dashboard — those go through the explicit
 //   write path that bumps version + writes history.
+//
+// Recursive scan picks up agents/, pipelines/, nodes/, schemas/, and any
+// nested layout the user has under .agentforge/.
 const AGENTFORGE_DIR = join(process.cwd(), ".agentforge");
-for (const dir of ["agents", "pipelines", "nodes"]) {
-	try {
-		const loaded = loadDefinitionsFromDir(join(AGENTFORGE_DIR, dir));
-		for (const a of loaded.agents) {
-			if (USE_POSTGRES && pgKnownAgents.has(a.metadata.name)) continue;
-			definitionStore.addAgent(a);
-			if (pgDefinitionStore) await pgDefinitionStore.upsertAgent(a, "boot");
-		}
-		for (const p of loaded.pipelines) {
-			if (USE_POSTGRES && pgKnownPipelines.has(p.metadata.name)) continue;
-			definitionStore.addPipeline(p);
-			if (pgDefinitionStore) await pgDefinitionStore.upsertPipeline(p, "boot");
-		}
-		for (const n of loaded.nodes) {
-			if (USE_POSTGRES && pgKnownNodes.has(n.metadata.name)) continue;
-			definitionStore.addNode(n);
-			if (pgDefinitionStore) await pgDefinitionStore.upsertNode(n, "boot");
-		}
-	} catch {
-		// Directory may not exist — that's fine
+try {
+	const loaded = loadDefinitionsFromDir(AGENTFORGE_DIR);
+	for (const a of loaded.agents) {
+		if (USE_POSTGRES && pgKnownAgents.has(a.metadata.name)) continue;
+		definitionStore.addAgent(a);
+		if (pgDefinitionStore) await pgDefinitionStore.upsertAgent(a, "boot");
 	}
+	for (const p of loaded.pipelines) {
+		if (USE_POSTGRES && pgKnownPipelines.has(p.metadata.name)) continue;
+		definitionStore.addPipeline(p);
+		if (pgDefinitionStore) await pgDefinitionStore.upsertPipeline(p, "boot");
+	}
+	for (const n of loaded.nodes) {
+		if (USE_POSTGRES && pgKnownNodes.has(n.metadata.name)) continue;
+		definitionStore.addNode(n);
+		if (pgDefinitionStore) await pgDefinitionStore.upsertNode(n, "boot");
+	}
+	for (const s of loaded.schemas) {
+		await applyPersistSink?.upsertSchema(s, "boot");
+	}
+} catch {
+	// .agentforge directory absent — fine, nothing to seed.
+}
+
+// Publish the runtime store so registry / runner / pipeline-controller /
+// run-pipeline / gate read agents and pipelines from the same place
+// `apply` writes them to. Without this, those code paths read raw YAML
+// from `.agentforge/` and the DB rows are invisible to execution.
+setRuntimeDefinitionStore(definitionStore);
+
+// PG-mode definition refresh loop.
+//
+// `agentforge apply` writes to PG from a separate process; the running
+// dashboard / control-plane process holds its in-memory DefinitionStore
+// populated only at boot. Without a refresh, dashboard reads stay stale
+// until CP restart. Periodic re-list keeps the in-memory cache within
+// `AGENTFORGE_PG_DEFINITIONS_REFRESH_MS` (default 5s) of PG truth.
+//
+// Replaced by Postgres LISTEN/NOTIFY in a future release — this is the
+// minimum-viable fix for v0.2.0.
+let pgRefreshInterval: NodeJS.Timeout | null = null;
+if (USE_POSTGRES && pgDefinitionStore) {
+	const refreshMs = Number.parseInt(
+		process.env.AGENTFORGE_PG_DEFINITIONS_REFRESH_MS ?? "5000",
+		10,
+	);
+	const refresh = async (): Promise<void> => {
+		if (!pgDefinitionStore) return;
+		try {
+			const [agents, pipelines, nodes, schemas] = await Promise.all([
+				pgDefinitionStore.list("AgentDefinition"),
+				pgDefinitionStore.list("PipelineDefinition"),
+				pgDefinitionStore.list("NodeDefinition"),
+				pgDefinitionStore.list("Schema"),
+			]);
+			definitionStore.clear();
+			for (const def of agents) {
+				definitionStore.addAgent(
+					JSON.parse(def.specYaml) as AgentDefinitionYaml,
+				);
+			}
+			for (const def of pipelines) {
+				definitionStore.addPipeline(
+					JSON.parse(def.specYaml) as PipelineDefinitionYaml,
+				);
+			}
+			for (const def of nodes) {
+				definitionStore.addNode(JSON.parse(def.specYaml) as NodeDefinitionYaml);
+			}
+			// Schemas: rebuild the global validator registry from the persisted
+			// rows. setDiscoveredSchemas atomically replaces the map, so reads
+			// during a refresh see either the old or the new state, never a
+			// half-built one.
+			const schemaBodies = schemas.map((row) => ({
+				name: row.name,
+				schema: JSON.parse(row.specYaml) as Record<string, unknown>,
+			}));
+			setDiscoveredSchemas(buildSchemaValidators(schemaBodies));
+		} catch {
+			// Best-effort — a transient PG hiccup keeps the previous
+			// in-memory state instead of clearing it.
+		}
+	};
+	pgRefreshInterval = setInterval(refresh, refreshMs);
+	// Don't keep the event loop alive — short-lived commands (apply,
+	// gate, run) should still be able to exit cleanly. Long-lived
+	// commands (dashboard, worker) hold the loop open via their HTTP
+	// servers, so the interval keeps firing there.
+	pgRefreshInterval.unref();
 }
 
 // --- State Store (SQLite default, PostgreSQL via env) ---
@@ -293,7 +427,7 @@ const noopBackend = {
 const nodeRuntimes = definitionStore
 	.listNodes()
 	.map((def) =>
-		def.spec.connection.type === "ssh"
+		def.spec.connection?.type === "ssh"
 			? new SshNodeRuntime(def)
 			: new LocalNodeRuntime(def, noopBackend),
 	);
@@ -314,11 +448,82 @@ registerInfoCommand(program);
 registerExecCommand(program);
 registerApplyCommand(program, definitionStore, applyPersistSink);
 
+// Versioned definition source for the Settings page — dashboard reads
+// version + timestamps via this when set, falling back to the in-memory
+// definitionStore (no version info) only when neither store is wired.
+const versionedDefinitionSource = (() => {
+	if (pgDefinitionStore) {
+		const pg = pgDefinitionStore;
+		return {
+			async list(
+				kind: "AgentDefinition" | "PipelineDefinition" | "NodeDefinition",
+			) {
+				const rows = await pg.list(kind);
+				return rows.map((r) => ({
+					name: r.name,
+					specYaml: r.specYaml,
+					version: r.version,
+					createdAt: r.createdAt,
+					updatedAt: r.updatedAt,
+				}));
+			},
+			async get(
+				kind: "AgentDefinition" | "PipelineDefinition" | "NodeDefinition",
+				name: string,
+			) {
+				const r = await pg.get(kind, name);
+				return r
+					? {
+							name: r.name,
+							specYaml: r.specYaml,
+							version: r.version,
+							createdAt: r.createdAt,
+							updatedAt: r.updatedAt,
+						}
+					: null;
+			},
+		};
+	}
+	if (sqliteDefinitionStore) {
+		const sqlite = sqliteDefinitionStore;
+		return {
+			async list(
+				kind: "AgentDefinition" | "PipelineDefinition" | "NodeDefinition",
+			) {
+				return sqlite.list(kind).map((r) => ({
+					name: r.name,
+					specYaml: r.specYaml,
+					version: r.version,
+					createdAt: r.createdAt,
+					updatedAt: r.updatedAt,
+				}));
+			},
+			async get(
+				kind: "AgentDefinition" | "PipelineDefinition" | "NodeDefinition",
+				name: string,
+			) {
+				const r = sqlite.get(kind, name);
+				return r
+					? {
+							name: r.name,
+							specYaml: r.specYaml,
+							version: r.version,
+							createdAt: r.createdAt,
+							updatedAt: r.updatedAt,
+						}
+					: null;
+			},
+		};
+	}
+	return undefined;
+})();
+
 registerDashboardCommand(program, {
 	store: stateStore,
 	gateController,
 	pipelineController,
 	definitionStore,
+	versionedDefinitionSource,
 	config: appConfig,
 	eventBus,
 	agentExecutor,
@@ -331,6 +536,7 @@ registerNodesCommands(program, nodeRegistry);
 registerNodeStartCommand(program);
 
 void program.parseAsync().then(async () => {
+	if (pgRefreshInterval) clearInterval(pgRefreshInterval);
 	await stateStore.close();
 	if (sqliteDefinitionStore) sqliteDefinitionStore.close();
 	if (pgDefinitionStore) await pgDefinitionStore.close();

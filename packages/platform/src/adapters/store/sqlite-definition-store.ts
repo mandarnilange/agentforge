@@ -19,7 +19,8 @@ import Database from "better-sqlite3";
 export type DefinitionKind =
 	| "AgentDefinition"
 	| "PipelineDefinition"
-	| "NodeDefinition";
+	| "NodeDefinition"
+	| "Schema";
 
 const SCHEMA_MIGRATIONS_DDL = `
 CREATE TABLE IF NOT EXISTS schema_migrations (
