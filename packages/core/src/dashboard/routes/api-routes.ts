@@ -18,11 +18,35 @@ export type PipelineExecutor = (
 	inputs: Record<string, string>,
 ) => void;
 
+/**
+ * Versioned definition source — pluggable so dashboard reads can pick up
+ * version + timestamp metadata that the in-memory `DefinitionStore` doesn't
+ * track. Backed by `PgDefinitionStore` in PG mode and `SqliteDefinitionStore`
+ * in SQLite mode; left undefined for bare `agentforge-core` standalone use.
+ */
+export interface VersionedDefinitionRow {
+	name: string;
+	specYaml: string;
+	version: number;
+	createdAt: string;
+	updatedAt: string;
+}
+export interface VersionedDefinitionSource {
+	list(
+		kind: "AgentDefinition" | "PipelineDefinition" | "NodeDefinition",
+	): Promise<VersionedDefinitionRow[]>;
+	get(
+		kind: "AgentDefinition" | "PipelineDefinition" | "NodeDefinition",
+		name: string,
+	): Promise<VersionedDefinitionRow | null>;
+}
+
 export interface ServerContext {
 	service: DashboardResourceService;
 	gateController?: GateController;
 	pipelineController?: PipelineController;
 	definitionStore?: DefinitionStore;
+	versionedDefinitionSource?: VersionedDefinitionSource;
 	executePipeline?: PipelineExecutor;
 }
 
@@ -218,10 +242,17 @@ export async function handleApiRoute(
 	}
 
 	// Definition list/detail endpoints consumed by the Settings page.
-	// Read-only in core; CRUD + versioning lives in platform's SqliteDefinitionStore.
+	// Prefers the versioned source (PG / SQLite definition store) so version
+	// + timestamps surface correctly. Falls back to in-memory DefinitionStore
+	// for bare `agentforge-core` use where no DB-backed source exists.
 	const defRoute = matchDefinitionRoute(path);
 	if (defRoute) {
-		handleDefinitionRead(res, defRoute, ctx.definitionStore);
+		await handleDefinitionRead(
+			res,
+			defRoute,
+			ctx.definitionStore,
+			ctx.versionedDefinitionSource,
+		);
 		return;
 	}
 
@@ -252,17 +283,66 @@ function matchDefinitionRoute(path: string): DefinitionRouteMatch | null {
 	return null;
 }
 
-function handleDefinitionRead(
+async function handleDefinitionRead(
 	res: ServerResponse,
 	match: DefinitionRouteMatch,
 	store: DefinitionStore | undefined,
-): void {
-	if (!store) {
+	versioned: VersionedDefinitionSource | undefined,
+): Promise<void> {
+	const kindToFull = {
+		agents: "AgentDefinition",
+		"pipeline-defs": "PipelineDefinition",
+		"node-defs": "NodeDefinition",
+	} as const;
+
+	// Schemas: always read from the global validator registry — schema
+	// bodies are stored as JSON, not as a parsed yaml definition, so the
+	// versioned-row shape doesn't apply.
+	if (match.kind === "schemas") {
 		if (match.name) {
-			json(res, 404, { error: "Not found" });
-		} else {
-			json(res, 200, []);
+			const body = getDiscoveredSchema(match.name);
+			if (!body) {
+				json(res, 404, { error: `Schema "${match.name}" not found` });
+				return;
+			}
+			json(res, 200, schemaDetail(match.name, body));
+			return;
 		}
+		json(
+			res,
+			200,
+			listDiscoveredSchemas().map((name) => schemaSummary(name)),
+		);
+		return;
+	}
+
+	const kindFull = kindToFull[match.kind];
+
+	// Versioned source (PG / SQLite definition store) wins — surfaces real
+	// version + timestamp + spec_yaml that include applied edits.
+	if (versioned) {
+		if (match.name) {
+			const row = await versioned.get(kindFull, match.name);
+			if (!row) {
+				json(res, 404, { error: `${kindFull} "${match.name}" not found` });
+				return;
+			}
+			json(res, 200, versionedDetail(kindFull, row));
+			return;
+		}
+		const rows = await versioned.list(kindFull);
+		json(
+			res,
+			200,
+			rows.map((r) => versionedSummary(kindFull, r)),
+		);
+		return;
+	}
+
+	// Fallback: in-memory DefinitionStore (no version info — surface as v1).
+	if (!store) {
+		if (match.name) json(res, 404, { error: "Not found" });
+		else json(res, 200, []);
 		return;
 	}
 
@@ -306,40 +386,54 @@ function handleDefinitionRead(
 		return;
 	}
 
-	if (match.kind === "node-defs") {
-		if (match.name) {
-			const def = store.getNode(match.name);
-			if (!def) {
-				json(res, 404, { error: `NodeDefinition "${match.name}" not found` });
-				return;
-			}
-			json(res, 200, definitionDetail("NodeDefinition", def));
-			return;
-		}
-		json(
-			res,
-			200,
-			store.listNodes().map((d) => definitionSummary("NodeDefinition", d)),
-		);
-		return;
-	}
-
-	// schemas — read from the global validator registry (DB-hydrated at
-	// boot in platform mode, populated from .agentforge/schemas/ in core).
+	// node-defs
 	if (match.name) {
-		const body = getDiscoveredSchema(match.name);
-		if (!body) {
-			json(res, 404, { error: `Schema "${match.name}" not found` });
+		const def = store.getNode(match.name);
+		if (!def) {
+			json(res, 404, { error: `NodeDefinition "${match.name}" not found` });
 			return;
 		}
-		json(res, 200, schemaDetail(match.name, body));
+		json(res, 200, definitionDetail("NodeDefinition", def));
 		return;
 	}
 	json(
 		res,
 		200,
-		listDiscoveredSchemas().map((name) => schemaSummary(name)),
+		store.listNodes().map((d) => definitionSummary("NodeDefinition", d)),
 	);
+}
+
+function versionedSummary(
+	kind: "AgentDefinition" | "PipelineDefinition" | "NodeDefinition",
+	row: VersionedDefinitionRow,
+) {
+	return {
+		name: row.name,
+		kind,
+		version: row.version,
+		createdAt: row.createdAt,
+		updatedAt: row.updatedAt,
+	};
+}
+
+function versionedDetail(
+	kind: "AgentDefinition" | "PipelineDefinition" | "NodeDefinition",
+	row: VersionedDefinitionRow,
+) {
+	// `specYaml` from the store is JSON.stringify of the YAML object. The
+	// dashboard renders it in a code panel — convert to YAML for readability,
+	// matching what definitionDetail does for the in-memory path.
+	let specYaml = row.specYaml;
+	try {
+		const parsed = JSON.parse(row.specYaml);
+		specYaml = stringifyYaml(parsed);
+	} catch {
+		// Leave as-is if not parseable JSON.
+	}
+	return {
+		...versionedSummary(kind, row),
+		specYaml,
+	};
 }
 
 function schemaSummary(name: string) {

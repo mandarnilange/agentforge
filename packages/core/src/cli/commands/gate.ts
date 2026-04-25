@@ -9,6 +9,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import chalk from "chalk";
 import type { Command } from "commander";
+import { getRuntimeDefinitionStore } from "../../agents/definition-source.js";
 import type { PipelineController } from "../../control-plane/pipeline-controller.js";
 import { parsePipelineDefinition } from "../../definitions/parser.js";
 import { resolveAgentforgeDir } from "../../di/agentforge-dir.js";
@@ -244,6 +245,14 @@ export function registerGateCommand(
 }
 
 function loadPipelineDef(pipelineName: string) {
+	// Runtime DefinitionStore (DB-backed in platform mode) wins over the
+	// filesystem fallback so apply'd pipelines are visible to gate handlers.
+	const runtime = getRuntimeDefinitionStore();
+	if (runtime) {
+		const def = runtime.getPipeline(pipelineName);
+		if (def) return def;
+		return null;
+	}
 	const pipelinePath = resolve(
 		join(resolveAgentforgeDir(), "pipelines", `${pipelineName}.pipeline.yaml`),
 	);

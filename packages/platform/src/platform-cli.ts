@@ -9,6 +9,7 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { InMemoryEventBus } from "agentforge-core/adapters/events/in-memory-event-bus.js";
+import { setRuntimeDefinitionStore } from "agentforge-core/agents/definition-source.js";
 import { registerDashboardCommand } from "agentforge-core/cli/commands/dashboard.js";
 import { registerExecCommand } from "agentforge-core/cli/commands/exec.js";
 import { registerGateCommand } from "agentforge-core/cli/commands/gate.js";
@@ -265,6 +266,12 @@ try {
 	// .agentforge directory absent — fine, nothing to seed.
 }
 
+// Publish the runtime store so registry / runner / pipeline-controller /
+// run-pipeline / gate read agents and pipelines from the same place
+// `apply` writes them to. Without this, those code paths read raw YAML
+// from `.agentforge/` and the DB rows are invisible to execution.
+setRuntimeDefinitionStore(definitionStore);
+
 // PG-mode definition refresh loop.
 //
 // `agentforge apply` writes to PG from a separate process; the running
@@ -441,11 +448,82 @@ registerInfoCommand(program);
 registerExecCommand(program);
 registerApplyCommand(program, definitionStore, applyPersistSink);
 
+// Versioned definition source for the Settings page — dashboard reads
+// version + timestamps via this when set, falling back to the in-memory
+// definitionStore (no version info) only when neither store is wired.
+const versionedDefinitionSource = (() => {
+	if (pgDefinitionStore) {
+		const pg = pgDefinitionStore;
+		return {
+			async list(
+				kind: "AgentDefinition" | "PipelineDefinition" | "NodeDefinition",
+			) {
+				const rows = await pg.list(kind);
+				return rows.map((r) => ({
+					name: r.name,
+					specYaml: r.specYaml,
+					version: r.version,
+					createdAt: r.createdAt,
+					updatedAt: r.updatedAt,
+				}));
+			},
+			async get(
+				kind: "AgentDefinition" | "PipelineDefinition" | "NodeDefinition",
+				name: string,
+			) {
+				const r = await pg.get(kind, name);
+				return r
+					? {
+							name: r.name,
+							specYaml: r.specYaml,
+							version: r.version,
+							createdAt: r.createdAt,
+							updatedAt: r.updatedAt,
+						}
+					: null;
+			},
+		};
+	}
+	if (sqliteDefinitionStore) {
+		const sqlite = sqliteDefinitionStore;
+		return {
+			async list(
+				kind: "AgentDefinition" | "PipelineDefinition" | "NodeDefinition",
+			) {
+				return sqlite.list(kind).map((r) => ({
+					name: r.name,
+					specYaml: r.specYaml,
+					version: r.version,
+					createdAt: r.createdAt,
+					updatedAt: r.updatedAt,
+				}));
+			},
+			async get(
+				kind: "AgentDefinition" | "PipelineDefinition" | "NodeDefinition",
+				name: string,
+			) {
+				const r = sqlite.get(kind, name);
+				return r
+					? {
+							name: r.name,
+							specYaml: r.specYaml,
+							version: r.version,
+							createdAt: r.createdAt,
+							updatedAt: r.updatedAt,
+						}
+					: null;
+			},
+		};
+	}
+	return undefined;
+})();
+
 registerDashboardCommand(program, {
 	store: stateStore,
 	gateController,
 	pipelineController,
 	definitionStore,
+	versionedDefinitionSource,
 	config: appConfig,
 	eventBus,
 	agentExecutor,

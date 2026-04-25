@@ -1,7 +1,9 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
+import type { AgentDefinitionYaml } from "../definitions/parser.js";
 import { parseDefinitionFile } from "../definitions/parser.js";
 import { resolveAgentforgeDir } from "../di/agentforge-dir.js";
+import { getRuntimeDefinitionStore } from "./definition-source.js";
 
 export interface AgentSummary {
 	id: string;
@@ -19,7 +21,29 @@ export interface AgentInfo extends AgentSummary {
 	tools: string[];
 }
 
+function definitionToInfo(def: AgentDefinitionYaml): AgentInfo {
+	return {
+		id: def.metadata.name,
+		displayName: def.metadata.displayName ?? def.metadata.name,
+		role: def.metadata.description ?? def.metadata.role ?? "",
+		phase: def.metadata.phase,
+		humanEquivalent: def.metadata.humanEquivalent ?? "",
+		description: def.metadata.description ?? "",
+		executor: def.spec.executor,
+		inputs: def.spec.inputs?.map((i) => i.type) ?? [],
+		outputs: def.spec.outputs.map((o) => o.type),
+		tools: def.spec.tools ?? [],
+	};
+}
+
 function loadAll(): AgentInfo[] {
+	// Prefer the runtime DefinitionStore (DB-backed in platform mode).
+	// Fall back to filesystem for bare `agentforge-core` CLI runs.
+	const runtime = getRuntimeDefinitionStore();
+	if (runtime) {
+		return runtime.listAgents().map(definitionToInfo);
+	}
+
 	const agentsDir = join(resolveAgentforgeDir(), "agents");
 	let files: string[];
 	try {
@@ -33,18 +57,7 @@ function loadAll(): AgentInfo[] {
 		try {
 			const def = parseDefinitionFile(join(agentsDir, file));
 			if (def.kind !== "AgentDefinition") continue;
-			result.push({
-				id: def.metadata.name,
-				displayName: def.metadata.displayName ?? def.metadata.name,
-				role: def.metadata.description ?? def.metadata.role ?? "",
-				phase: def.metadata.phase,
-				humanEquivalent: def.metadata.humanEquivalent ?? "",
-				description: def.metadata.description ?? "",
-				executor: def.spec.executor,
-				inputs: def.spec.inputs?.map((i) => i.type) ?? [],
-				outputs: def.spec.outputs.map((o) => o.type),
-				tools: def.spec.tools ?? [],
-			});
+			result.push(definitionToInfo(def));
 		} catch {
 			// Skip unparseable files
 		}

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { Command } from "commander";
 import type { GateController } from "../../control-plane/gate-controller.js";
 import type { PipelineController } from "../../control-plane/pipeline-controller.js";
+import type { VersionedDefinitionSource } from "../../dashboard/routes/api-routes.js";
 import { createDashboardServer } from "../../dashboard/server.js";
 import type { DefinitionStore } from "../../definitions/store.js";
 import type { AppConfig } from "../../di/config.js";
@@ -16,6 +17,13 @@ export interface DashboardCommandDeps {
 	readonly gateController: GateController;
 	readonly pipelineController?: PipelineController;
 	readonly definitionStore?: DefinitionStore;
+	/**
+	 * Optional versioned definition source (PG / SQLite definition store).
+	 * When provided, the Settings page reads from this in preference to the
+	 * in-memory `definitionStore` so version + timestamp + history-aware
+	 * data show through.
+	 */
+	readonly versionedDefinitionSource?: VersionedDefinitionSource;
 	readonly config?: AppConfig;
 	readonly eventBus?: IEventBus;
 	/**
@@ -34,6 +42,7 @@ export function registerDashboardCommand(
 		gateController,
 		pipelineController,
 		definitionStore,
+		versionedDefinitionSource,
 		config,
 		eventBus,
 		agentExecutor,
@@ -54,6 +63,7 @@ export function registerDashboardCommand(
 						gateController,
 						pipelineController,
 						definitionStore,
+						versionedDefinitionSource,
 						outputDir: config?.outputDir,
 						executePipeline: (() => {
 							if (!config || !pipelineController || !agentExecutor) {

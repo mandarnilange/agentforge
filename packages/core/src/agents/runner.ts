@@ -29,6 +29,7 @@ import {
 	composeTimeoutSignal,
 	isTimeoutAbortError,
 } from "../utils/abort-signal.js";
+import { getRuntimeDefinitionStore } from "./definition-source.js";
 import { injectOutputSchemas } from "./prompt-schema-injector.js";
 import { getAgentInfo } from "./registry.js";
 
@@ -292,6 +293,17 @@ async function runStepPipeline(
 }
 
 function loadAgentDefinition(agentId: string): AgentDefinitionYaml | null {
+	// Prefer the runtime DefinitionStore (DB-backed in platform mode).
+	// Fall back to filesystem for bare `agentforge-core` CLI runs.
+	const runtime = getRuntimeDefinitionStore();
+	if (runtime) {
+		const def = runtime.getAgent(agentId);
+		if (def) return def;
+		// In platform mode, DB is the source of truth. Don't silently fall
+		// through to filesystem — that just hides "applied? no, not really"
+		// confusion. Return null so the caller surfaces "Unknown agent".
+		return null;
+	}
 	try {
 		const definition = parseDefinitionFile(
 			join(resolveAgentforgeDir(), "agents", `${agentId}.agent.yaml`),

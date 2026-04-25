@@ -1,4 +1,5 @@
-import { readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { dirname, isAbsolute, resolve as resolvePath } from "node:path";
 import type {
 	AgentDefinitionYaml,
 	NodeDefinitionYaml,
@@ -28,6 +29,46 @@ export interface DefinitionPersistSink {
 	): Promise<void>;
 	upsertNode(node: NodeDefinitionYaml, changedBy: string): Promise<void>;
 	upsertSchema(schema: SchemaResource, changedBy: string): Promise<void>;
+}
+
+/**
+ * If the agent's systemPrompt is a `file:` reference, resolve it against
+ * the apply'd directory and inline the content into `text:` BEFORE
+ * persisting. The DB-stored agent yaml is then self-contained — runtime
+ * doesn't need to find the prompt file on disk later (which it would
+ * not, in PG/multi-host deployments).
+ *
+ * Tries candidates in order: file path as given, then under
+ * `<templateRoot>/prompts/<file>`. If neither exists, leaves the agent
+ * untouched and prints a warning so the user can fix it.
+ */
+function inlinePromptIfFile(
+	agent: AgentDefinitionYaml,
+	templateRoot: string,
+): AgentDefinitionYaml {
+	const promptFile = agent.spec.systemPrompt?.file;
+	if (!promptFile || agent.spec.systemPrompt.text) return agent;
+
+	const candidates: string[] = [];
+	if (isAbsolute(promptFile)) {
+		candidates.push(promptFile);
+	} else {
+		candidates.push(resolvePath(templateRoot, promptFile));
+		candidates.push(resolvePath(templateRoot, "prompts", promptFile));
+	}
+	for (const candidate of candidates) {
+		if (existsSync(candidate)) {
+			const text = readFileSync(candidate, "utf-8");
+			return {
+				...agent,
+				spec: { ...agent.spec, systemPrompt: { text } },
+			};
+		}
+	}
+	console.warn(
+		`apply: prompt file '${promptFile}' not found for agent '${agent.metadata.name}' (looked under ${templateRoot}). The agent will be persisted as-is; runtime will fall back to filesystem lookup.`,
+	);
+	return agent;
 }
 
 function readSingleSchema(path: string): SchemaResource | null {
@@ -66,7 +107,8 @@ export function registerApplyCommand(
 
 			if (stat.isDirectory()) {
 				const loaded = loadDefinitionsFromDir(path);
-				for (const agent of loaded.agents) {
+				for (const rawAgent of loaded.agents) {
+					const agent = inlinePromptIfFile(rawAgent, path);
 					store.addAgent(agent);
 					await persistSink?.upsertAgent(agent, "apply");
 				}
@@ -120,10 +162,12 @@ export function registerApplyCommand(
 
 			const def = parseDefinitionFile(path);
 			switch (def.kind) {
-				case "AgentDefinition":
-					store.addAgent(def);
-					await persistSink?.upsertAgent(def, "apply");
+				case "AgentDefinition": {
+					const inlined = inlinePromptIfFile(def, dirname(path));
+					store.addAgent(inlined);
+					await persistSink?.upsertAgent(inlined, "apply");
 					break;
+				}
 				case "PipelineDefinition":
 					store.addPipeline(def);
 					await persistSink?.upsertPipeline(def, "apply");

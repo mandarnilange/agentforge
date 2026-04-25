@@ -19,6 +19,7 @@
 		"./control-plane/*": "./dist/control-plane/*",
 		"./observability/*": "./dist/observability/*",
 		"./adapters/*": "./dist/adapters/*",
+		"./agents/*": "./dist/agents/*",
 		"./definitions/*": "./dist/definitions/*",
 		"./cli/*": "./dist/cli/*",
 		"./engine/*": "./dist/engine/*",

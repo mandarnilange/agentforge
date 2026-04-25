@@ -20,6 +20,7 @@ import {
 	json,
 	type PipelineExecutor,
 	type ServerContext,
+	type VersionedDefinitionSource,
 } from "./routes/api-routes.js";
 import { handleControlPlaneRoute } from "./routes/control-plane-routes.js";
 import { registerSSERoutes } from "./routes/sse-routes.js";
@@ -52,6 +53,11 @@ export interface DashboardServerOptions {
 	gateController?: GateController;
 	pipelineController?: PipelineController;
 	definitionStore?: DefinitionStore;
+	/**
+	 * Versioned definition source (PG / SQLite definition store). When set,
+	 * dashboard reads route through this for accurate version + timestamp.
+	 */
+	versionedDefinitionSource?: VersionedDefinitionSource;
 	executePipeline?: PipelineExecutor;
 	/** Config outputDir for resolving live conversation sidecars. */
 	outputDir?: string;
@@ -80,6 +86,7 @@ export function createDashboardServer(
 		gateController: opts.gateController,
 		pipelineController: opts.pipelineController,
 		definitionStore: opts.definitionStore,
+		versionedDefinitionSource: opts.versionedDefinitionSource,
 		executePipeline: opts.executePipeline,
 	};
 	const eventBus = opts.eventBus;
