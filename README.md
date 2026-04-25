@@ -10,7 +10,7 @@
 
 AgentForge lets engineering teams define agents and pipelines the way Kubernetes lets them define pods and deployments — and then handles the execution, state, and scheduling underneath. Ships with a reference SDLC template so you can see an end-to-end pipeline running in minutes. The framework is domain-agnostic: point it at code review, content generation, ops runbooks, data pipelines — anything where multiple LLM calls need to be coordinated with humans in the loop.
 
-> **Status:** first public release (v0.2.0). API surface is stabilising but may still shift. Please [open an issue](https://github.com/mandarnilange/agentforge/issues) for anything that looks rough.
+> **Status:** v0.2.0 release candidate (`v0.2.0-rc.0`) — early-feedback build. API surface is stabilising but may still shift; `npm install agentforge` pulls the RC. Please [open an issue](https://github.com/mandarnilange/agentforge/issues) for anything that looks rough, or use [Discussions](https://github.com/mandarnilange/agentforge/discussions) for usage questions.
 
 ---
 
