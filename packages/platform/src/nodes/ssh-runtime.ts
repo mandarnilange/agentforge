@@ -20,7 +20,7 @@ export class SshNodeRuntime implements INodeRuntime {
 	}
 
 	ping(): Promise<boolean> {
-		const { host } = this.nodeDefinition.spec.connection;
+		const host = this.nodeDefinition.spec.connection?.host;
 		if (!host) return Promise.resolve(false);
 
 		return new Promise((resolve) => {
@@ -39,7 +39,8 @@ export class SshNodeRuntime implements INodeRuntime {
 
 	async execute(request: NodeRunRequest): Promise<NodeRunResult> {
 		const start = Date.now();
-		const { host, user } = this.nodeDefinition.spec.connection;
+		const host = this.nodeDefinition.spec.connection?.host;
+		const user = this.nodeDefinition.spec.connection?.user;
 		if (!host) {
 			return {
 				runId: request.runId,

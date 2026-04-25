@@ -199,6 +199,57 @@ for (const dir of ["agents", "pipelines", "nodes"]) {
 	}
 }
 
+// PG-mode definition refresh loop.
+//
+// `agentforge apply` writes to PG from a separate process; the running
+// dashboard / control-plane process holds its in-memory DefinitionStore
+// populated only at boot. Without a refresh, dashboard reads stay stale
+// until CP restart. Periodic re-list keeps the in-memory cache within
+// `AGENTFORGE_PG_DEFINITIONS_REFRESH_MS` (default 5s) of PG truth.
+//
+// Replaced by Postgres LISTEN/NOTIFY in a future release — this is the
+// minimum-viable fix for v0.2.0.
+let pgRefreshInterval: NodeJS.Timeout | null = null;
+if (USE_POSTGRES && pgDefinitionStore) {
+	const refreshMs = Number.parseInt(
+		process.env.AGENTFORGE_PG_DEFINITIONS_REFRESH_MS ?? "5000",
+		10,
+	);
+	const refresh = async (): Promise<void> => {
+		if (!pgDefinitionStore) return;
+		try {
+			const [agents, pipelines, nodes] = await Promise.all([
+				pgDefinitionStore.list("AgentDefinition"),
+				pgDefinitionStore.list("PipelineDefinition"),
+				pgDefinitionStore.list("NodeDefinition"),
+			]);
+			definitionStore.clear();
+			for (const def of agents) {
+				definitionStore.addAgent(
+					JSON.parse(def.specYaml) as AgentDefinitionYaml,
+				);
+			}
+			for (const def of pipelines) {
+				definitionStore.addPipeline(
+					JSON.parse(def.specYaml) as PipelineDefinitionYaml,
+				);
+			}
+			for (const def of nodes) {
+				definitionStore.addNode(JSON.parse(def.specYaml) as NodeDefinitionYaml);
+			}
+		} catch {
+			// Best-effort — a transient PG hiccup keeps the previous
+			// in-memory state instead of clearing it.
+		}
+	};
+	pgRefreshInterval = setInterval(refresh, refreshMs);
+	// Don't keep the event loop alive — short-lived commands (apply,
+	// gate, run) should still be able to exit cleanly. Long-lived
+	// commands (dashboard, worker) hold the loop open via their HTTP
+	// servers, so the interval keeps firing there.
+	pgRefreshInterval.unref();
+}
+
 // --- State Store (SQLite default, PostgreSQL via env) ---
 const STATE_DB_PATH = join(OUTPUT_DIR, ".agentforge-state.db");
 let stateStore: import("agentforge-core/domain/ports/state-store.port.js").IStateStore;
@@ -293,7 +344,7 @@ const noopBackend = {
 const nodeRuntimes = definitionStore
 	.listNodes()
 	.map((def) =>
-		def.spec.connection.type === "ssh"
+		def.spec.connection?.type === "ssh"
 			? new SshNodeRuntime(def)
 			: new LocalNodeRuntime(def, noopBackend),
 	);
@@ -331,6 +382,7 @@ registerNodesCommands(program, nodeRegistry);
 registerNodeStartCommand(program);
 
 void program.parseAsync().then(async () => {
+	if (pgRefreshInterval) clearInterval(pgRefreshInterval);
 	await stateStore.close();
 	if (sqliteDefinitionStore) sqliteDefinitionStore.close();
 	if (pgDefinitionStore) await pgDefinitionStore.close();

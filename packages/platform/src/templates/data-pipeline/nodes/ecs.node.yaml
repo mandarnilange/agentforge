@@ -16,6 +16,6 @@ spec:
   # Template default — override IMAGE_TAG with a versioned tag or digest for deterministic production deployments
   image: "${ECR_REPO}/agentforge-etl-worker:${IMAGE_TAG:-latest}"
   resources:
-    maxConcurrentAgents: 10
+    maxConcurrentRuns: 10
     memory: 8g
     cpu: "4"
