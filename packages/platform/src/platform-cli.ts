@@ -22,6 +22,11 @@ import { registerTemplatesCommand } from "agentforge-core/cli/commands/templates
 import { GateController } from "agentforge-core/control-plane/gate-controller.js";
 import { PipelineController } from "agentforge-core/control-plane/pipeline-controller.js";
 import { LocalAgentScheduler } from "agentforge-core/control-plane/scheduler.js";
+import type {
+	AgentDefinitionYaml,
+	NodeDefinitionYaml,
+	PipelineDefinitionYaml,
+} from "agentforge-core/definitions/parser.js";
 import { loadDefinitionsFromDir } from "agentforge-core/definitions/parser.js";
 import type { DefinitionStore } from "agentforge-core/definitions/store.js";
 import { createDefinitionStore } from "agentforge-core/definitions/store.js";
@@ -112,6 +117,13 @@ let pgDefinitionStore: PgDefinitionStore | null = null;
 let definitionStore: DefinitionStore;
 let applyPersistSink: DefinitionPersistSink | null = null;
 
+// Names that PG already knows about — skipped during YAML overlay so PG
+// (the source of truth across process boundaries) wins. Empty in SQLite
+// mode, populated from PG hydration in PG mode.
+const pgKnownAgents = new Set<string>();
+const pgKnownPipelines = new Set<string>();
+const pgKnownNodes = new Set<string>();
+
 if (USE_POSTGRES) {
 	const pgStore = new PgDefinitionStore(POSTGRES_URL as string);
 	try {
@@ -125,6 +137,27 @@ if (USE_POSTGRES) {
 	}
 	pgDefinitionStore = pgStore;
 	definitionStore = createDefinitionStore();
+
+	// Hydrate the in-memory runtime store from PG. PG is the source of truth
+	// across process boundaries; without this, a worker (or a CP replica)
+	// without local .agentforge YAML would start with an empty runtime store
+	// even though PG has all the definitions.
+	for (const def of await pgStore.list("AgentDefinition")) {
+		const agent = JSON.parse(def.specYaml) as AgentDefinitionYaml;
+		definitionStore.addAgent(agent);
+		pgKnownAgents.add(agent.metadata.name);
+	}
+	for (const def of await pgStore.list("PipelineDefinition")) {
+		const pipeline = JSON.parse(def.specYaml) as PipelineDefinitionYaml;
+		definitionStore.addPipeline(pipeline);
+		pgKnownPipelines.add(pipeline.metadata.name);
+	}
+	for (const def of await pgStore.list("NodeDefinition")) {
+		const node = JSON.parse(def.specYaml) as NodeDefinitionYaml;
+		definitionStore.addNode(node);
+		pgKnownNodes.add(node.metadata.name);
+	}
+
 	applyPersistSink = {
 		upsertAgent: (a, by) => pgStore.upsertAgent(a, by),
 		upsertPipeline: (p, by) => pgStore.upsertPipeline(p, by),
@@ -135,21 +168,29 @@ if (USE_POSTGRES) {
 	definitionStore = sqliteDefinitionStore.asLegacyStore();
 }
 
-// Auto-load definitions from .agentforge/ directories — into the sync store
-// for runtime lookups, and also into the PG persistence store when present.
+// Auto-load definitions from local .agentforge/.
+//
+// SQLite mode: YAML is the only persistence input — overlay always.
+// PG mode: PG is the source of truth. We only seed names that PG has not
+//   already persisted. To push edits to existing names, run `agentforge
+//   apply -f <path>` or use the dashboard — those go through the explicit
+//   write path that bumps version + writes history.
 const AGENTFORGE_DIR = join(process.cwd(), ".agentforge");
 for (const dir of ["agents", "pipelines", "nodes"]) {
 	try {
 		const loaded = loadDefinitionsFromDir(join(AGENTFORGE_DIR, dir));
 		for (const a of loaded.agents) {
+			if (USE_POSTGRES && pgKnownAgents.has(a.metadata.name)) continue;
 			definitionStore.addAgent(a);
 			if (pgDefinitionStore) await pgDefinitionStore.upsertAgent(a, "boot");
 		}
 		for (const p of loaded.pipelines) {
+			if (USE_POSTGRES && pgKnownPipelines.has(p.metadata.name)) continue;
 			definitionStore.addPipeline(p);
 			if (pgDefinitionStore) await pgDefinitionStore.upsertPipeline(p, "boot");
 		}
 		for (const n of loaded.nodes) {
+			if (USE_POSTGRES && pgKnownNodes.has(n.metadata.name)) continue;
 			definitionStore.addNode(n);
 			if (pgDefinitionStore) await pgDefinitionStore.upsertNode(n, "boot");
 		}

@@ -40,6 +40,53 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 `;
 
 /**
+ * Columns added to the v0.2.0 baseline tables AFTER the original
+ * SqliteStateStore CREATE TABLEs (which earlier shipped via incremental
+ * `ALTER TABLE ADD COLUMN` blocks). On a pre-v0.2.0 DB the baseline
+ * `CREATE TABLE IF NOT EXISTS` no-ops, so without a bridge step these
+ * columns stay missing while schema_migrations gets 001-state recorded.
+ */
+const PRE_BASELINE_BRIDGE_ALTERS: ReadonlyArray<string> = [
+	"ALTER TABLE agent_runs ADD COLUMN revision_notes TEXT",
+	"ALTER TABLE agent_runs ADD COLUMN provider TEXT",
+	"ALTER TABLE agent_runs ADD COLUMN model_name TEXT",
+	"ALTER TABLE agent_runs ADD COLUMN cost_usd REAL",
+	"ALTER TABLE agent_runs ADD COLUMN last_status_at TEXT",
+	"ALTER TABLE agent_runs ADD COLUMN status_message TEXT",
+	"ALTER TABLE agent_runs ADD COLUMN retry_count INTEGER NOT NULL DEFAULT 0",
+	"ALTER TABLE agent_runs ADD COLUMN recovery_token TEXT",
+	"ALTER TABLE agent_runs ADD COLUMN exit_reason TEXT",
+	"ALTER TABLE pipeline_runs ADD COLUMN inputs TEXT",
+	"ALTER TABLE pipeline_runs ADD COLUMN version INTEGER NOT NULL DEFAULT 1",
+	"ALTER TABLE pipeline_runs ADD COLUMN session_name TEXT NOT NULL DEFAULT ''",
+	"ALTER TABLE gates ADD COLUMN version INTEGER NOT NULL DEFAULT 1",
+];
+
+/**
+ * Bring a pre-v0.2.0 DB forward in place. Detects "pipeline_runs exists
+ * but schema_migrations does not" — only true for legacy DBs. Each ALTER
+ * is wrapped so already-present columns don't fail the boot.
+ */
+function bridgePreBaselineSqlite(db: Database.Database): void {
+	const existingTables = new Set(
+		(
+			db
+				.prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+				.all() as Array<{ name: string }>
+		).map((r) => r.name),
+	);
+	if (!existingTables.has("pipeline_runs")) return; // fresh install
+	if (existingTables.has("schema_migrations")) return; // already migrated
+	for (const sql of PRE_BASELINE_BRIDGE_ALTERS) {
+		try {
+			db.prepare(sql).run();
+		} catch {
+			// Column already exists — partial bridges are fine.
+		}
+	}
+}
+
+/**
  * Synchronous migration runner for better-sqlite3. Behaviour mirrors the
  * shared async runner in `migrate.ts`: init tracking table, compute
  * applied set, run missing `.sql` files in lexical order.
@@ -51,6 +98,7 @@ function applySqliteMigrationsSync(
 	const runSql = (sql: string) => {
 		db.exec(sql);
 	};
+	bridgePreBaselineSqlite(db);
 	runSql(SCHEMA_MIGRATIONS_DDL);
 	const applied = new Set(
 		(

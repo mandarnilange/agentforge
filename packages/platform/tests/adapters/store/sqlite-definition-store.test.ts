@@ -167,6 +167,29 @@ describe("SqliteDefinitionStore (P15.5-T9)", () => {
 		expect(def.version).toBe(2);
 	});
 
+	it("upserts: no-op when spec_yaml is byte-identical", () => {
+		const created = store.create(
+			"AgentDefinition",
+			"developer",
+			AGENT_YAML,
+			"cli",
+		);
+		// Same content, different changedBy — should still no-op (no version
+		// bump, no extra history row). Boot loops re-upsert every YAML on
+		// every restart; without this we'd churn versions endlessly.
+		const upserted = store.upsert(
+			"AgentDefinition",
+			"developer",
+			AGENT_YAML,
+			"boot",
+		);
+		expect(upserted.version).toBe(1);
+		expect(upserted.id).toBe(created.id);
+		const history = store.listHistory("AgentDefinition", "developer");
+		expect(history).toHaveLength(1);
+		expect(history[0].changeType).toBe("created");
+	});
+
 	// --- Delete ---
 
 	it("deletes a definition", () => {

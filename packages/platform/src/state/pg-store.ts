@@ -21,10 +21,6 @@ import type {
 	IStateStore,
 } from "agentforge-core/domain/ports/state-store.port.js";
 import {
-	loadMigrations,
-	runMigrations,
-} from "agentforge-core/state/migrate.js";
-import {
 	rowToAgentRun,
 	rowToAuditLog,
 	rowToExecutionLog,
@@ -34,7 +30,7 @@ import {
 } from "agentforge-core/state/row-mappers.js";
 import { generateSessionName } from "agentforge-core/utils/session-name.js";
 import pg from "pg";
-import { createPostgresExecutor } from "./pg-migrate.js";
+import { applyPgMigrations } from "./pg-migrate.js";
 
 const PG_MIGRATIONS_DIR = join(
 	dirname(fileURLToPath(import.meta.url)),
@@ -50,8 +46,7 @@ export class PostgresStateStore implements IStateStore {
 	}
 
 	async initialize(): Promise<void> {
-		const migrations = await loadMigrations(PG_MIGRATIONS_DIR);
-		await runMigrations(migrations, createPostgresExecutor(this.pool));
+		await applyPgMigrations(this.pool, PG_MIGRATIONS_DIR);
 	}
 
 	/**

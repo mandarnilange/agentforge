@@ -17,12 +17,8 @@ import type {
 	NodeDefinitionYaml,
 	PipelineDefinitionYaml,
 } from "agentforge-core/definitions/parser.js";
-import {
-	loadMigrations,
-	runMigrations,
-} from "agentforge-core/state/migrate.js";
 import pg from "pg";
-import { createPostgresExecutor } from "../../state/pg-migrate.js";
+import { applyPgMigrations } from "../../state/pg-migrate.js";
 
 // Resolves to dist/state/migrations/postgres at runtime and
 // src/state/migrations/postgres in tests/dev. Shared with PostgresStateStore
@@ -71,8 +67,7 @@ export class PgDefinitionStore {
 	}
 
 	async initialize(): Promise<void> {
-		const migrations = await loadMigrations(PG_MIGRATIONS_DIR);
-		await runMigrations(migrations, createPostgresExecutor(this.pool));
+		await applyPgMigrations(this.pool, PG_MIGRATIONS_DIR);
 	}
 
 	async preflight(): Promise<void> {
@@ -202,9 +197,27 @@ export class PgDefinitionStore {
 	): Promise<ResourceDefinition> {
 		const existing = await this.get(kind, name);
 		if (existing) {
+			// Byte-identical spec → no-op. Boot loops upsert every YAML on
+			// every restart; without this guard each restart would bump
+			// version + write a history row for every unchanged definition.
+			if (existing.specYaml === specYaml) return existing;
 			return this.update(kind, name, specYaml, changedBy);
 		}
-		return this.create(kind, name, specYaml, changedBy);
+		try {
+			return await this.create(kind, name, specYaml, changedBy);
+		} catch (err) {
+			// Concurrent-create race: another process inserted between our
+			// get() and create(). PG raises unique_violation (code 23505).
+			// Re-fetch and resolve — same content → return; differs → update.
+			if (isPgUniqueViolation(err)) {
+				const racy = await this.get(kind, name);
+				if (racy) {
+					if (racy.specYaml === specYaml) return racy;
+					return this.update(kind, name, specYaml, changedBy);
+				}
+			}
+			throw err;
+		}
 	}
 
 	async delete(
@@ -300,6 +313,15 @@ export class PgDefinitionStore {
 			],
 		);
 	}
+}
+
+function isPgUniqueViolation(err: unknown): boolean {
+	return (
+		typeof err === "object" &&
+		err !== null &&
+		"code" in err &&
+		(err as { code: unknown }).code === "23505"
+	);
 }
 
 function rowToDefinition(row: Record<string, unknown>): ResourceDefinition {

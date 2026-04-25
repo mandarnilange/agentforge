@@ -20,6 +20,12 @@ vi.mock("pg", () => {
 	class MockPool {
 		query = mockQuery;
 		end = mockEnd;
+		async connect() {
+			return {
+				query: mockQuery,
+				release: () => {},
+			};
+		}
 	}
 	return { default: { Pool: MockPool } };
 });
@@ -221,6 +227,7 @@ describe("PgDefinitionStore", () => {
 		});
 
 		it("updates when present", async () => {
+			// Use a DIFFERENT specYaml than the existing record so update fires
 			mockQuery
 				.mockResolvedValueOnce({ rows: [defRow({ version: 3 })] }) // get (for upsert)
 				.mockResolvedValueOnce({ rows: [defRow({ version: 3 })] }) // get (inside update)
@@ -229,10 +236,56 @@ describe("PgDefinitionStore", () => {
 			const def = await store.upsert(
 				"AgentDefinition",
 				"developer",
-				AGENT_YAML,
+				`${AGENT_YAML}\n# changed`,
 				"cli",
 			);
 			expect(def.version).toBe(4);
+		});
+
+		it("recovers from a concurrent-create race (PG unique_violation 23505)", async () => {
+			// Race: get() returns null (no existing record), but by the time
+			// create() INSERTs, another process has already inserted the row.
+			// Result: PG throws unique_violation (code 23505). upsert() should
+			// re-fetch and decide: byte-identical → return; differs → update.
+			const winnerYaml = AGENT_YAML;
+			const winnerRow = defRow({ version: 1, spec_yaml: winnerYaml });
+			const uniqueViolation = Object.assign(
+				new Error('duplicate key value violates unique constraint "..."'),
+				{ code: "23505" },
+			);
+
+			mockQuery
+				.mockResolvedValueOnce({ rows: [] }) // get() inside upsert → null
+				.mockRejectedValueOnce(uniqueViolation) // INSERT (create) → 23505
+				.mockResolvedValueOnce({ rows: [winnerRow] }); // re-fetch → existing
+
+			const def = await store.upsert(
+				"AgentDefinition",
+				"developer",
+				winnerYaml,
+				"boot",
+			);
+			// Same content as the row that won the race → no version bump.
+			expect(def.version).toBe(1);
+			// Three queries: initial get, failed INSERT, post-conflict get.
+			// No UPDATE issued.
+			expect(mockQuery).toHaveBeenCalledTimes(3);
+		});
+
+		it("is a no-op when spec_yaml is byte-identical to the existing record", async () => {
+			// Existing record has the SAME spec_yaml as the upsert input
+			mockQuery.mockResolvedValueOnce({
+				rows: [defRow({ version: 5, spec_yaml: AGENT_YAML })],
+			});
+			const def = await store.upsert(
+				"AgentDefinition",
+				"developer",
+				AGENT_YAML,
+				"boot",
+			);
+			expect(def.version).toBe(5); // no bump
+			// Only one query — the get(); no UPDATE, no INSERT history
+			expect(mockQuery).toHaveBeenCalledTimes(1);
 		});
 	});
 

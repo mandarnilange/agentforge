@@ -206,9 +206,26 @@ export class SqliteDefinitionStore {
 	): ResourceDefinition {
 		const existing = this.get(kind, name);
 		if (existing) {
+			// Byte-identical spec → no-op. Boot loops upsert every YAML on
+			// every restart; without this guard each restart would bump
+			// version + write a history row for every unchanged definition.
+			if (existing.specYaml === specYaml) return existing;
 			return this.update(kind, name, specYaml, changedBy);
 		}
-		return this.create(kind, name, specYaml, changedBy);
+		try {
+			return this.create(kind, name, specYaml, changedBy);
+		} catch (err) {
+			// Concurrent-create race (multiple processes against the same DB
+			// file): SQLite raises SQLITE_CONSTRAINT_UNIQUE. Re-fetch + resolve.
+			if (isSqliteUniqueViolation(err)) {
+				const racy = this.get(kind, name);
+				if (racy) {
+					if (racy.specYaml === specYaml) return racy;
+					return this.update(kind, name, specYaml, changedBy);
+				}
+			}
+			throw err;
+		}
 	}
 
 	delete(kind: DefinitionKind, name: string, changedBy: string): void {
@@ -352,6 +369,16 @@ export class SqliteDefinitionStore {
 			return undefined;
 		}
 	}
+}
+
+function isSqliteUniqueViolation(err: unknown): boolean {
+	if (typeof err !== "object" || err === null) return false;
+	const e = err as { code?: unknown; message?: unknown };
+	return (
+		e.code === "SQLITE_CONSTRAINT_UNIQUE" ||
+		e.code === "SQLITE_CONSTRAINT" ||
+		(typeof e.message === "string" && e.message.includes("UNIQUE constraint"))
+	);
 }
 
 function rowToDefinition(row: Record<string, unknown>): ResourceDefinition {

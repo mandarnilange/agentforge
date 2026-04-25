@@ -13,6 +13,15 @@ vi.mock("pg", () => {
 	class MockPool {
 		query = mockQuery;
 		end = mockEnd;
+		// applyPgMigrations() takes a dedicated client so the advisory lock
+		// shares a session with the migration queries. Route the client's
+		// query through the same mock so existing assertions still see calls.
+		async connect() {
+			return {
+				query: mockQuery,
+				release: () => {},
+			};
+		}
 	}
 	return { default: { Pool: MockPool } };
 });
