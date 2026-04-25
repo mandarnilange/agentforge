@@ -125,6 +125,10 @@ export const api = {
 	listNodeDefs: () => fetchJson<ResourceDef[]>(`${BASE}/node-defs`),
 	getNodeDef: (name: string) =>
 		fetchJson<ResourceDef>(`${BASE}/node-defs/${name}`),
+
+	listSchemaDefs: () => fetchJson<ResourceDef[]>(`${BASE}/schemas`),
+	getSchemaDef: (name: string) =>
+		fetchJson<ResourceDef>(`${BASE}/schemas/${name}`),
 };
 
 export interface ResourceDef {

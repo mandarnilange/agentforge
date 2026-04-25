@@ -5,6 +5,10 @@ import type { GateController } from "../../control-plane/gate-controller.js";
 import type { PipelineController } from "../../control-plane/pipeline-controller.js";
 import type { PipelineDefinitionYaml } from "../../definitions/parser.js";
 import type { DefinitionStore } from "../../definitions/store.js";
+import {
+	getDiscoveredSchema,
+	listDiscoveredSchemas,
+} from "../../schemas/index.js";
 import { generateArtifactPdf } from "../pdf-generator.js";
 
 export type PipelineExecutor = (
@@ -224,7 +228,7 @@ export async function handleApiRoute(
 	json(res, 404, { error: "Not found" });
 }
 
-type DefinitionRouteKind = "agents" | "pipeline-defs" | "node-defs";
+type DefinitionRouteKind = "agents" | "pipeline-defs" | "node-defs" | "schemas";
 
 interface DefinitionRouteMatch {
 	kind: DefinitionRouteKind;
@@ -232,7 +236,12 @@ interface DefinitionRouteMatch {
 }
 
 function matchDefinitionRoute(path: string): DefinitionRouteMatch | null {
-	for (const kind of ["agents", "pipeline-defs", "node-defs"] as const) {
+	for (const kind of [
+		"agents",
+		"pipeline-defs",
+		"node-defs",
+		"schemas",
+	] as const) {
 		const prefix = `/api/v1/${kind}`;
 		if (path === prefix) return { kind };
 		if (path.startsWith(`${prefix}/`)) {
@@ -297,21 +306,59 @@ function handleDefinitionRead(
 		return;
 	}
 
-	// node-defs
-	if (match.name) {
-		const def = store.getNode(match.name);
-		if (!def) {
-			json(res, 404, { error: `NodeDefinition "${match.name}" not found` });
+	if (match.kind === "node-defs") {
+		if (match.name) {
+			const def = store.getNode(match.name);
+			if (!def) {
+				json(res, 404, { error: `NodeDefinition "${match.name}" not found` });
+				return;
+			}
+			json(res, 200, definitionDetail("NodeDefinition", def));
 			return;
 		}
-		json(res, 200, definitionDetail("NodeDefinition", def));
+		json(
+			res,
+			200,
+			store.listNodes().map((d) => definitionSummary("NodeDefinition", d)),
+		);
+		return;
+	}
+
+	// schemas — read from the global validator registry (DB-hydrated at
+	// boot in platform mode, populated from .agentforge/schemas/ in core).
+	if (match.name) {
+		const body = getDiscoveredSchema(match.name);
+		if (!body) {
+			json(res, 404, { error: `Schema "${match.name}" not found` });
+			return;
+		}
+		json(res, 200, schemaDetail(match.name, body));
 		return;
 	}
 	json(
 		res,
 		200,
-		store.listNodes().map((d) => definitionSummary("NodeDefinition", d)),
+		listDiscoveredSchemas().map((name) => schemaSummary(name)),
 	);
+}
+
+function schemaSummary(name: string) {
+	return {
+		name,
+		kind: "Schema",
+		version: 1,
+		createdAt: "",
+		updatedAt: "",
+	};
+}
+
+function schemaDetail(name: string, body: Record<string, unknown>) {
+	return {
+		...schemaSummary(name),
+		// Render as JSON for the existing pre-block viewer; ResourceDef.specYaml
+		// is what the SPA prints, so we put the schema body there as JSON.
+		specYaml: JSON.stringify(body, null, 2),
+	};
 }
 
 // The in-memory YAML DefinitionStore doesn't track versions or timestamps —
