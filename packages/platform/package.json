@@ -1,6 +1,6 @@
 {
-	"name": "agentforge",
-	"version": "0.2.0-rc.0",
+	"name": "@mandarnilange/agentforge",
+	"version": "0.2.0-rc.1",
 	"description": "Production infrastructure for AgentForge — multi-provider LLMs, Docker/remote executors, Postgres state, full OTel, multi-node workers",
 	"type": "module",
 	"bin": {

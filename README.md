@@ -10,7 +10,7 @@
 
 AgentForge lets engineering teams define agents and pipelines the way Kubernetes lets them define pods and deployments — and then handles the execution, state, and scheduling underneath. Ships with a reference SDLC template so you can see an end-to-end pipeline running in minutes. The framework is domain-agnostic: point it at code review, content generation, ops runbooks, data pipelines — anything where multiple LLM calls need to be coordinated with humans in the loop.
 
-> **Status:** v0.2.0 release candidate (`v0.2.0-rc.0`) — early-feedback build. API surface is stabilising but may still shift; `npm install agentforge` pulls the RC. Please [open an issue](https://github.com/mandarnilange/agentforge/issues) for anything that looks rough, or use [Discussions](https://github.com/mandarnilange/agentforge/discussions) for usage questions.
+> **Status:** v0.2.0 release candidate (`v0.2.0-rc.1`) — early-feedback build. API surface is stabilising but may still shift; `npm install @mandarnilange/agentforge` pulls the RC. Please [open an issue](https://github.com/mandarnilange/agentforge/issues) for anything that looks rough, or use [Discussions](https://github.com/mandarnilange/agentforge/discussions) for usage questions.
 
 ---
 
@@ -47,7 +47,7 @@ One binary, one control plane, one audit trail. You focus on the systems; AgentF
 
 ```bash
 # 1. Install
-npm install agentforge
+npm install @mandarnilange/agentforge
 
 # 2. Set your Anthropic API key
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -347,9 +347,9 @@ Deeper dive on step pipelines, template variables, and loop semantics: [`docs/ar
 
 Two npm packages ship from this repo. Pick based on your target environment.
 
-| | **`agentforge-core`** | **`agentforge`** (platform) |
+| | **`agentforge-core`** | **`@mandarnilange/agentforge`** (platform) |
 |---|---|---|
-| **Install** | `npm install agentforge-core` | `npm install agentforge` (pulls in core) |
+| **Install** | `npm install agentforge-core` | `npm install @mandarnilange/agentforge` (pulls in core) |
 | **Binary** | `agentforge-core` | `agentforge` |
 | **Intended for** | Local dev, evaluation, library embed | Production, teams, multi-host |
 | **LLM providers** | Anthropic | Anthropic + OpenAI + Gemini + Ollama |

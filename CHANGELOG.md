@@ -3,11 +3,23 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0-rc.1] — Scope the platform package + retag
+
+The platform package is now published as `@mandarnilange/agentforge`
+because the unscoped name `agentforge` is blocked by npm's
+typosquatting / similarity policy (existing `agent-forge` package).
+The CLI binary stays `agentforge`; only the install path changes:
+`npm install @mandarnilange/agentforge`.
+
+`agentforge-core@0.2.0-rc.0` was published successfully on the first
+attempt; `0.2.0-rc.1` is a fresh version of both packages so the tag
+chain is consistent.
+
 ## [0.2.0-rc.0] — Release candidate (npm name registration + early feedback)
 
 This is a release candidate for the first public release. It claims the
-`agentforge-core` and `agentforge` npm names and exposes the framework
-to early users for feedback before the v0.2.0 final tag.
+`agentforge-core` and `@mandarnilange/agentforge` npm names and exposes
+the framework to early users for feedback before the v0.2.0 final tag.
 
 The complete feature set below is shipped and tested. Two limitations
 worth flagging for early adopters:
