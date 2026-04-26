@@ -2,7 +2,7 @@ import type {
 	AgentRunRequest,
 	AgentRunResult,
 	IExecutionBackend,
-} from "agentforge-core/domain/ports/execution-backend.port.js";
+} from "@mandarnilange/agentforge-core/domain/ports/execution-backend.port.js";
 
 const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
 

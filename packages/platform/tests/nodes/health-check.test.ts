@@ -1,5 +1,5 @@
-import type { NodeDefinitionYaml } from "agentforge-core/definitions/parser.js";
-import type { INodeRuntime } from "agentforge-core/domain/ports/node-runtime.port.js";
+import type { NodeDefinitionYaml } from "@mandarnilange/agentforge-core/definitions/parser.js";
+import type { INodeRuntime } from "@mandarnilange/agentforge-core/domain/ports/node-runtime.port.js";
 import { describe, expect, it, vi } from "vitest";
 import { NodeHealthChecker } from "../../src/nodes/health-check.js";
 import { NodeRegistry } from "../../src/nodes/registry.js";

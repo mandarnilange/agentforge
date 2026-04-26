@@ -1,7 +1,7 @@
 name: Release
 
 # Tag-triggered release pipeline. Push a semver tag (e.g. `v0.2.0`) to
-# publish agentforge-core + agentforge to npm, push Docker images
+# publish @mandarnilange/agentforge-core + @mandarnilange/agentforge to npm, push Docker images
 # to GHCR, and create a GitHub Release with CHANGELOG notes.
 #
 # Prereqs:
@@ -94,7 +94,7 @@ jobs:
       # Root build emits all publishable assets into dist/ BEFORE npm publish runs.
       # packages/*/prepublishOnly also delegates to the root build as a safety net.
       - run: npm run build
-      - name: Publish agentforge-core
+      - name: Publish @mandarnilange/agentforge-core
         working-directory: packages/core
         run: npm publish --access public --provenance
         env:

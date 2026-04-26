@@ -16,7 +16,7 @@ import type {
 	AgentDefinitionYaml,
 	NodeDefinitionYaml,
 	PipelineDefinitionYaml,
-} from "agentforge-core/definitions/parser.js";
+} from "@mandarnilange/agentforge-core/definitions/parser.js";
 import pg from "pg";
 import { applyPgMigrations } from "../../state/pg-migrate.js";
 

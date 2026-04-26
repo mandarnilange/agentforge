@@ -6,9 +6,9 @@
 import type {
 	LimitViolation,
 	PipelineLimits,
-} from "agentforge-core/domain/models/rate-limits.model.js";
-import type { IRateLimiter } from "agentforge-core/domain/ports/rate-limiter.port.js";
-import type { IStateStore } from "agentforge-core/domain/ports/state-store.port.js";
+} from "@mandarnilange/agentforge-core/domain/models/rate-limits.model.js";
+import type { IRateLimiter } from "@mandarnilange/agentforge-core/domain/ports/rate-limiter.port.js";
+import type { IStateStore } from "@mandarnilange/agentforge-core/domain/ports/state-store.port.js";
 
 export class PipelineRateLimiter implements IRateLimiter {
 	constructor(

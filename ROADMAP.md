@@ -14,7 +14,7 @@ Context for anyone skimming the roadmap — these pieces are already live:
 - Step pipeline engine with `llm` / `script` / `validate` / `transform` steps, plus `parallel` and `loop` constructs.
 - Approval gates between phases with a full audit trail.
 - Typed artifacts with 45 built-in schemas; Zod + JSON Schema validation.
-- SQLite state store (`agentforge-core`) and PostgreSQL (`agentforge`).
+- SQLite state store (`@mandarnilange/agentforge-core`) and PostgreSQL (`@mandarnilange/agentforge`).
 - Local, Docker, and remote HTTP executors.
 - Multi-provider LLMs — Anthropic, OpenAI, Gemini, Ollama. Mixed per-agent.
 - OpenTelemetry instrumentation (API-only in core; full SDK + Jaeger export in platform).
@@ -53,7 +53,7 @@ spec:
 
 ### OpenCode execution backend
 
-**Problem.** `agentforge-core` ships with `@mariozechner/pi-coding-agent` as the only coding runtime. The `IExecutionBackend` port exists so others can plug in, but no adapter has been written yet. OpenCode is a strong candidate — actively developed, TypeScript, similar tool surface.
+**Problem.** `@mandarnilange/agentforge-core` ships with `@mariozechner/pi-coding-agent` as the only coding runtime. The `IExecutionBackend` port exists so others can plug in, but no adapter has been written yet. OpenCode is a strong candidate — actively developed, TypeScript, similar tool surface.
 
 **Proposal.** New `OpenCodeExecutionBackend` in the platform package. Accepts an `AgentJob`, delegates to OpenCode's CLI or SDK, forwards status updates back via the `onStatus` callback, returns an `AgentJobResult`. Config via agent YAML `executor: opencode`.
 

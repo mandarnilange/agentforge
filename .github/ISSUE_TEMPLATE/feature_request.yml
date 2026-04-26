@@ -41,8 +41,8 @@ body:
     attributes:
       label: Which layer?
       options:
-        - agentforge-core (framework)
-        - agentforge (platform)
+        - "@mandarnilange/agentforge-core (framework)"
+        - "@mandarnilange/agentforge (platform)"
         - dashboard UI
         - templates / docs
         - CI / release / packaging

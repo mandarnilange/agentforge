@@ -50,24 +50,24 @@ describe("agentforge (platform) publish readiness", () => {
 	});
 
 	describe("core dependency", () => {
-		it("depends on unscoped agentforge-core", () => {
+		it("depends on @mandarnilange/agentforge-core", () => {
 			const deps = pkg.dependencies as Record<string, string>;
-			expect(deps["agentforge-core"]).toBeDefined();
+			expect(deps["@mandarnilange/agentforge-core"]).toBeDefined();
 		});
 
-		it("peer-depends on unscoped agentforge-core", () => {
+		it("peer-depends on @mandarnilange/agentforge-core", () => {
 			const peers = pkg.peerDependencies as Record<string, string>;
-			expect(peers["agentforge-core"]).toBeDefined();
+			expect(peers["@mandarnilange/agentforge-core"]).toBeDefined();
 		});
 
-		it("has no scoped @agentforge/* dependency keys", () => {
+		it("has no leftover unscoped agentforge-core dependency keys", () => {
 			const deps = pkg.dependencies as Record<string, string>;
 			const peers = pkg.peerDependencies as Record<string, string>;
-			const scoped = [
+			const unscoped = [
 				...Object.keys(deps ?? {}),
 				...Object.keys(peers ?? {}),
-			].filter((key) => key.startsWith("@agentforge/"));
-			expect(scoped).toEqual([]);
+			].filter((key) => key === "agentforge-core");
+			expect(unscoped).toEqual([]);
 		});
 	});
 });

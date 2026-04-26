@@ -1,4 +1,4 @@
-import type { IExecutionBackend } from "agentforge-core/domain/ports/execution-backend.port.js";
+import type { IExecutionBackend } from "@mandarnilange/agentforge-core/domain/ports/execution-backend.port.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	type BackendFactory,

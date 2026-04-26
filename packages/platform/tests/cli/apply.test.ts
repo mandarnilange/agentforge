@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createDefinitionStore } from "agentforge-core/definitions/store.js";
+import { createDefinitionStore } from "@mandarnilange/agentforge-core/definitions/store.js";
 import { Command } from "commander";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { registerApplyCommand } from "../../src/cli/commands/apply.js";

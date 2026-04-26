@@ -2,12 +2,12 @@ import {
 	type EventCallback,
 	PiAiExecutionBackend,
 	type ProgressCallback,
-} from "agentforge-core/adapters/execution/pi-ai-backend.js";
+} from "@mandarnilange/agentforge-core/adapters/execution/pi-ai-backend.js";
 import type {
 	AgentRunRequest,
 	AgentRunResult,
 	IExecutionBackend,
-} from "agentforge-core/domain/ports/execution-backend.port.js";
+} from "@mandarnilange/agentforge-core/domain/ports/execution-backend.port.js";
 
 export interface GeminiExecutionBackendOptions {
 	onProgress?: ProgressCallback;

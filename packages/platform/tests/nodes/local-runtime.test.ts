@@ -1,8 +1,8 @@
-import type { NodeDefinitionYaml } from "agentforge-core/definitions/parser.js";
+import type { NodeDefinitionYaml } from "@mandarnilange/agentforge-core/definitions/parser.js";
 import type {
 	AgentRunResult,
 	IExecutionBackend,
-} from "agentforge-core/domain/ports/execution-backend.port.js";
+} from "@mandarnilange/agentforge-core/domain/ports/execution-backend.port.js";
 import { describe, expect, it, vi } from "vitest";
 import { LocalNodeRuntime } from "../../src/nodes/local-runtime.js";
 

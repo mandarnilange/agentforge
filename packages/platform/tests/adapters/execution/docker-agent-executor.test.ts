@@ -5,7 +5,7 @@ import { Readable } from "node:stream";
 import type {
 	AgentJob,
 	StatusUpdate,
-} from "agentforge-core/domain/ports/agent-executor.port.js";
+} from "@mandarnilange/agentforge-core/domain/ports/agent-executor.port.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DockerAgentExecutor } from "../../../src/adapters/execution/docker-agent-executor.js";
 

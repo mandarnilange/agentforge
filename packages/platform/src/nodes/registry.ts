@@ -1,9 +1,9 @@
-import type { NodeDefinitionYaml } from "agentforge-core/definitions/parser.js";
+import type { NodeDefinitionYaml } from "@mandarnilange/agentforge-core/definitions/parser.js";
 import type {
 	NodeRecord,
 	NodeStatus,
-} from "agentforge-core/domain/models/node.model.js";
-import type { IStateStore } from "agentforge-core/domain/ports/state-store.port.js";
+} from "@mandarnilange/agentforge-core/domain/models/node.model.js";
+import type { IStateStore } from "@mandarnilange/agentforge-core/domain/ports/state-store.port.js";
 
 export interface NodeRegistration {
 	readonly definition: NodeDefinitionYaml;

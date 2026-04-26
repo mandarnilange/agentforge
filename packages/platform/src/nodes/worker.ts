@@ -1,5 +1,5 @@
-import type { IControlPlaneApi } from "agentforge-core/domain/ports/control-plane-api.port.js";
-import type { INodeRuntime } from "agentforge-core/domain/ports/node-runtime.port.js";
+import type { IControlPlaneApi } from "@mandarnilange/agentforge-core/domain/ports/control-plane-api.port.js";
+import type { INodeRuntime } from "@mandarnilange/agentforge-core/domain/ports/node-runtime.port.js";
 
 export class NodeWorker {
 	private activeRuns = 0;

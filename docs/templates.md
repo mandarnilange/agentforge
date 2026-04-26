@@ -25,7 +25,7 @@ agentforge templates list
 
 ## simple-sdlc
 
-**Package**: `agentforge-core` — available without platform
+**Package**: `@mandarnilange/agentforge-core` — available without platform
 
 Lightweight 3-agent SDLC pipeline. Takes a project brief, produces requirements, an architecture plan, and generated code.
 

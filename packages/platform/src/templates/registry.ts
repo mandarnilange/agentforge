@@ -5,7 +5,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { TemplateManifest } from "agentforge-core/templates/registry.js";
+import type { TemplateManifest } from "@mandarnilange/agentforge-core/templates/registry.js";
 
 export type { TemplateManifest };
 

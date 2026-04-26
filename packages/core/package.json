@@ -1,6 +1,6 @@
 {
-	"name": "agentforge-core",
-	"version": "0.2.0-rc.1",
+	"name": "@mandarnilange/agentforge-core",
+	"version": "0.2.0-rc.2",
 	"description": "AgentForge core: Kubernetes-style control plane for AI agent workflows — declarative YAML agents, pipelines, gates, and state",
 	"type": "module",
 	"bin": {

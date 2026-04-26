@@ -11,7 +11,7 @@ const { mockExecFile, mockConnect } = vi.hoisted(() => ({
 vi.mock("node:child_process", () => ({ execFile: mockExecFile }));
 vi.mock("node:net", () => ({ connect: mockConnect }));
 
-import type { NodeDefinitionYaml } from "agentforge-core/definitions/parser.js";
+import type { NodeDefinitionYaml } from "@mandarnilange/agentforge-core/definitions/parser.js";
 import { SshNodeRuntime } from "../../src/nodes/ssh-runtime.js";
 
 function makeNodeDef(

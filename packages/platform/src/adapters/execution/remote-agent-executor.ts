@@ -10,7 +10,7 @@ import type {
 	AgentJobResult,
 	IAgentExecutor,
 	StatusUpdate,
-} from "agentforge-core/domain/ports/agent-executor.port.js";
+} from "@mandarnilange/agentforge-core/domain/ports/agent-executor.port.js";
 
 export class RemoteAgentExecutor implements IAgentExecutor {
 	constructor(private readonly baseUrl: string) {}

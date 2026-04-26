@@ -1,9 +1,9 @@
-import type { NodeDefinitionYaml } from "agentforge-core/definitions/parser.js";
-import type { IControlPlaneApi } from "agentforge-core/domain/ports/control-plane-api.port.js";
+import type { NodeDefinitionYaml } from "@mandarnilange/agentforge-core/definitions/parser.js";
+import type { IControlPlaneApi } from "@mandarnilange/agentforge-core/domain/ports/control-plane-api.port.js";
 import type {
 	INodeRuntime,
 	NodeRunResult,
-} from "agentforge-core/domain/ports/node-runtime.port.js";
+} from "@mandarnilange/agentforge-core/domain/ports/node-runtime.port.js";
 import { describe, expect, it, vi } from "vitest";
 import { NodeWorker } from "../../src/nodes/worker.js";
 

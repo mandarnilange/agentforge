@@ -12,17 +12,17 @@
 
 import { existsSync, rmSync } from "node:fs";
 import { createServer, type Server } from "node:http";
-import { InMemoryEventBus } from "agentforge-core/adapters/events/in-memory-event-bus.js";
+import { InMemoryEventBus } from "@mandarnilange/agentforge-core/adapters/events/in-memory-event-bus.js";
 import {
 	type ControlPlaneRouteContext,
 	handleControlPlaneRoute,
-} from "agentforge-core/dashboard/routes/control-plane-routes.js";
+} from "@mandarnilange/agentforge-core/dashboard/routes/control-plane-routes.js";
 import type {
 	AgentJob,
 	AgentJobResult,
 	IAgentExecutor,
-} from "agentforge-core/domain/ports/agent-executor.port.js";
-import { SqliteStateStore } from "agentforge-core/state/store.js";
+} from "@mandarnilange/agentforge-core/domain/ports/agent-executor.port.js";
+import { SqliteStateStore } from "@mandarnilange/agentforge-core/state/store.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const TEST_DB = "/tmp/multi-worker-integration-test.db";

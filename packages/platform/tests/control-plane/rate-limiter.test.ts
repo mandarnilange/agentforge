@@ -1,6 +1,6 @@
 import { existsSync, rmSync } from "node:fs";
-import type { PipelineLimits } from "agentforge-core/domain/models/rate-limits.model.js";
-import { SqliteStateStore } from "agentforge-core/state/store.js";
+import type { PipelineLimits } from "@mandarnilange/agentforge-core/domain/models/rate-limits.model.js";
+import { SqliteStateStore } from "@mandarnilange/agentforge-core/state/store.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { PipelineRateLimiter } from "../../src/control-plane/rate-limiter.js";
 

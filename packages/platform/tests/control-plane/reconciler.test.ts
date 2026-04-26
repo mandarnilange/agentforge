@@ -1,9 +1,9 @@
 import assert from "node:assert";
 import { existsSync, rmSync } from "node:fs";
-import { InMemoryEventBus } from "agentforge-core/adapters/events/in-memory-event-bus.js";
-import { DEFAULT_RECOVERY_OPTIONS } from "agentforge-core/domain/models/recovery.model.js";
-import type { PipelineEvent } from "agentforge-core/domain/ports/event-bus.port.js";
-import { SqliteStateStore } from "agentforge-core/state/store.js";
+import { InMemoryEventBus } from "@mandarnilange/agentforge-core/adapters/events/in-memory-event-bus.js";
+import { DEFAULT_RECOVERY_OPTIONS } from "@mandarnilange/agentforge-core/domain/models/recovery.model.js";
+import type { PipelineEvent } from "@mandarnilange/agentforge-core/domain/ports/event-bus.port.js";
+import { SqliteStateStore } from "@mandarnilange/agentforge-core/state/store.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { PipelineRecoveryService } from "../../src/control-plane/pipeline-recovery.js";
 import { ReconciliationLoop } from "../../src/control-plane/reconciler.js";

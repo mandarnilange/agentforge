@@ -1,16 +1,16 @@
 import { existsSync, rmSync } from "node:fs";
-import { InMemoryEventBus } from "agentforge-core/adapters/events/in-memory-event-bus.js";
-import { GateController } from "agentforge-core/control-plane/gate-controller.js";
-import { PipelineController } from "agentforge-core/control-plane/pipeline-controller.js";
-import { LocalAgentScheduler } from "agentforge-core/control-plane/scheduler.js";
+import { InMemoryEventBus } from "@mandarnilange/agentforge-core/adapters/events/in-memory-event-bus.js";
+import { GateController } from "@mandarnilange/agentforge-core/control-plane/gate-controller.js";
+import { PipelineController } from "@mandarnilange/agentforge-core/control-plane/pipeline-controller.js";
+import { LocalAgentScheduler } from "@mandarnilange/agentforge-core/control-plane/scheduler.js";
 import type {
 	AgentJob,
 	AgentJobResult,
 	IAgentExecutor,
 	StatusUpdate,
-} from "agentforge-core/domain/ports/agent-executor.port.js";
-import type { PipelineEvent } from "agentforge-core/domain/ports/event-bus.port.js";
-import { SqliteStateStore } from "agentforge-core/state/store.js";
+} from "@mandarnilange/agentforge-core/domain/ports/agent-executor.port.js";
+import type { PipelineEvent } from "@mandarnilange/agentforge-core/domain/ports/event-bus.port.js";
+import { SqliteStateStore } from "@mandarnilange/agentforge-core/state/store.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { NodeHealthMonitor } from "../../src/control-plane/node-health-monitor.js";
 import { ReconciliationLoop } from "../../src/control-plane/reconciler.js";

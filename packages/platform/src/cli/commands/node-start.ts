@@ -17,7 +17,7 @@ import type {
 	AgentJobResult,
 	IAgentExecutor,
 	StatusUpdate,
-} from "agentforge-core/domain/ports/agent-executor.port.js";
+} from "@mandarnilange/agentforge-core/domain/ports/agent-executor.port.js";
 import chalk from "chalk";
 import type { Command } from "commander";
 
@@ -227,10 +227,10 @@ export function registerNodeStartCommand(program: Command): void {
 			let executor: IAgentExecutor;
 			try {
 				const { loadConfig } = await import(
-					"agentforge-core/di/config.js" as string
+					"@mandarnilange/agentforge-core/di/config.js" as string
 				);
 				const { createAgentExecutor } = await import(
-					"agentforge-core/di/executor-factory.js" as string
+					"@mandarnilange/agentforge-core/di/executor-factory.js" as string
 				);
 				const config = loadConfig();
 				executor = createAgentExecutor("local", { config });

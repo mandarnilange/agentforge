@@ -2,7 +2,7 @@ import type {
 	AgentRunRequest,
 	AgentRunResult,
 	IExecutionBackend,
-} from "agentforge-core/domain/ports/execution-backend.port.js";
+} from "@mandarnilange/agentforge-core/domain/ports/execution-backend.port.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@mariozechner/pi-ai", () => ({

@@ -1,6 +1,6 @@
-import type { NodeStatus } from "agentforge-core/domain/models/node.model.js";
-import type { INodeRuntime } from "agentforge-core/domain/ports/node-runtime.port.js";
-import type { AgentMetrics } from "agentforge-core/observability/metrics.js";
+import type { NodeStatus } from "@mandarnilange/agentforge-core/domain/models/node.model.js";
+import type { INodeRuntime } from "@mandarnilange/agentforge-core/domain/ports/node-runtime.port.js";
+import type { AgentMetrics } from "@mandarnilange/agentforge-core/observability/metrics.js";
 import type { NodeRegistry } from "./registry.js";
 
 export class NodeHealthChecker {

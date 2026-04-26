@@ -1,8 +1,8 @@
 import type {
 	EventCallback,
 	ProgressCallback,
-} from "agentforge-core/adapters/execution/pi-ai-backend.js";
-import type { IExecutionBackend } from "agentforge-core/domain/ports/execution-backend.port.js";
+} from "@mandarnilange/agentforge-core/adapters/execution/pi-ai-backend.js";
+import type { IExecutionBackend } from "@mandarnilange/agentforge-core/domain/ports/execution-backend.port.js";
 
 export interface BackendFactoryOptions {
 	onProgress?: ProgressCallback;

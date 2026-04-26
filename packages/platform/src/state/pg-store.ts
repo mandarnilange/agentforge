@@ -6,11 +6,11 @@
 import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { AgentRunRecord } from "agentforge-core/domain/models/agent-run.model.js";
-import type { Gate } from "agentforge-core/domain/models/gate.model.js";
-import type { NodeRecord } from "agentforge-core/domain/models/node.model.js";
-import type { PipelineRun } from "agentforge-core/domain/models/pipeline-run.model.js";
-import type { ConversationEntry } from "agentforge-core/domain/ports/execution-backend.port.js";
+import type { AgentRunRecord } from "@mandarnilange/agentforge-core/domain/models/agent-run.model.js";
+import type { Gate } from "@mandarnilange/agentforge-core/domain/models/gate.model.js";
+import type { NodeRecord } from "@mandarnilange/agentforge-core/domain/models/node.model.js";
+import type { PipelineRun } from "@mandarnilange/agentforge-core/domain/models/pipeline-run.model.js";
+import type { ConversationEntry } from "@mandarnilange/agentforge-core/domain/ports/execution-backend.port.js";
 import type {
 	AuditLogEntry,
 	CreateAgentRunInput,
@@ -19,7 +19,7 @@ import type {
 	ExecutionLog,
 	ExecutionLogEntry,
 	IStateStore,
-} from "agentforge-core/domain/ports/state-store.port.js";
+} from "@mandarnilange/agentforge-core/domain/ports/state-store.port.js";
 import {
 	rowToAgentRun,
 	rowToAuditLog,
@@ -27,8 +27,8 @@ import {
 	rowToGate,
 	rowToNode,
 	rowToPipelineRun,
-} from "agentforge-core/state/row-mappers.js";
-import { generateSessionName } from "agentforge-core/utils/session-name.js";
+} from "@mandarnilange/agentforge-core/state/row-mappers.js";
+import { generateSessionName } from "@mandarnilange/agentforge-core/utils/session-name.js";
 import pg from "pg";
 import { applyPgMigrations } from "./pg-migrate.js";
 
@@ -488,7 +488,7 @@ export class PostgresStateStore implements IStateStore {
 	async listAuditLog(
 		pipelineRunId?: string,
 	): Promise<
-		import("agentforge-core/domain/ports/state-store.port.js").AuditLog[]
+		import("@mandarnilange/agentforge-core/domain/ports/state-store.port.js").AuditLog[]
 	> {
 		const { rows } = pipelineRunId
 			? await this.pool.query(
