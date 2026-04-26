@@ -23,7 +23,7 @@
 
 ```bash
 # Install from npm (pulls in agentforge-core transitively)
-npm install agentforge
+npm install @mandarnilange/agentforge
 
 # Set your API key — grab one from https://console.anthropic.com/settings/keys
 export ANTHROPIC_API_KEY=sk-ant-your-key-here
@@ -59,10 +59,12 @@ npx agentforge run --project my-saas --input "brief=Build a SaaS invoicing platf
 ### From npm (recommended)
 
 ```bash
-npm install agentforge
+npm install @mandarnilange/agentforge
 ```
 
-`agentforge` depends on `agentforge-core`, so a single install gives you both. Defaults (SQLite, local executor, Anthropic) work with zero extra configuration.
+`@mandarnilange/agentforge` depends on `agentforge-core`, so a single install gives you both. Defaults (SQLite, local executor, Anthropic) work with zero extra configuration.
+
+> The package is scoped because the unscoped `agentforge` name conflicts with another npm package (`agent-forge`) under npm's similarity policy. The CLI binary is still `agentforge` — only the install path is scoped.
 
 If you want the framework primitives without the platform binary or the multi-provider / Postgres / Docker executor extras, install core directly:
 
