@@ -45,8 +45,8 @@ body:
     attributes:
       label: Which package?
       options:
-        - agentforge-core (framework)
-        - agentforge (platform)
+        - "@mandarnilange/agentforge-core (framework)"
+        - "@mandarnilange/agentforge (platform)"
         - both / unsure
         - docker image
     validations:

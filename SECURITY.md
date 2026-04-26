@@ -40,8 +40,8 @@ In scope:
   Docker / remote executors
 - Code injection via YAML definitions, pipeline inputs, or the
   dashboard API
-- Supply-chain concerns in the npm packages (`agentforge-core`,
-  `agentforge`) or the GHCR container images
+- Supply-chain concerns in the npm packages (`@mandarnilange/agentforge-core`,
+  `@mandarnilange/agentforge`) or the GHCR container images
 
 Out of scope:
 
@@ -51,6 +51,17 @@ Out of scope:
   Google, Ollama) — please report those to the provider directly
 - Security issues in `pi-coding-agent` or `pi-ai` upstream — open
   an issue on their respective repositories
+
+## Known transitive advisories
+
+`npm audit` currently flags `uuid <14.0.0` (GHSA-w5hq-g745-h8pq,
+moderate) reached via `dockerode@4.x`. The advisory is specific to
+`uuid.v3/v5/v6` when called with a caller-supplied `buf` argument;
+`dockerode` only uses `uuid.v4()`, which is **not** affected.
+AgentForge has no direct dependency on `uuid` and does not invoke the
+vulnerable code path. The fix lands in v0.3 with `dockerode@5.x`
+(which drops the `uuid` dependency entirely) once
+`@types/dockerode@5` is published.
 
 ## Safe harbour
 

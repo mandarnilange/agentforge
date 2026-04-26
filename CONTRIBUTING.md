@@ -57,7 +57,7 @@ npx biome check --write .
 
 - **Domain layer** (`packages/core/src/domain/`) has zero external dependencies
 - **Core** must never import from **platform** — dependency flows one way only
-- Platform imports core types via `agentforge-core/...` package imports
+- Platform imports core types via `@mandarnilange/agentforge-core/...` package imports
 - All external concerns are injected through port interfaces
 
 ## Commit Messages

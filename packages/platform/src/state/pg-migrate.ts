@@ -22,7 +22,7 @@ import {
 	type MigrationFile,
 	type MigrationResult,
 	runMigrations,
-} from "agentforge-core/state/migrate.js";
+} from "@mandarnilange/agentforge-core/state/migrate.js";
 import type pg from "pg";
 
 const PG_MIGRATIONS_TABLE_SQL = `

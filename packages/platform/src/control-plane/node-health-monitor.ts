@@ -10,9 +10,9 @@
  *   3. Emit node_offline event
  */
 
-import type { NodeStatus } from "agentforge-core/domain/models/node.model.js";
-import type { IEventBus } from "agentforge-core/domain/ports/event-bus.port.js";
-import type { IStateStore } from "agentforge-core/domain/ports/state-store.port.js";
+import type { NodeStatus } from "@mandarnilange/agentforge-core/domain/models/node.model.js";
+import type { IEventBus } from "@mandarnilange/agentforge-core/domain/ports/event-bus.port.js";
+import type { IStateStore } from "@mandarnilange/agentforge-core/domain/ports/state-store.port.js";
 
 export interface NodeHealthOptions {
 	degradedThresholdMs: number; // default: 30_000

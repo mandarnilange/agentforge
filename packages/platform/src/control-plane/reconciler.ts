@@ -9,8 +9,8 @@
  * This is the safety net backing the event-driven flow.
  */
 
-import type { IEventBus } from "agentforge-core/domain/ports/event-bus.port.js";
-import type { IStateStore } from "agentforge-core/domain/ports/state-store.port.js";
+import type { IEventBus } from "@mandarnilange/agentforge-core/domain/ports/event-bus.port.js";
+import type { IStateStore } from "@mandarnilange/agentforge-core/domain/ports/state-store.port.js";
 import type { PipelineRecoveryService } from "./pipeline-recovery.js";
 
 export interface ReconcilerOptions {

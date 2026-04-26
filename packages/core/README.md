@@ -1,4 +1,4 @@
-# agentforge-core
+# @mandarnilange/agentforge-core
 
 **Kubernetes for AI agent workflows.** The core orchestration framework.
 
@@ -9,7 +9,7 @@ Ships with a minimal `simple-sdlc` starter template (analyst → architect → d
 ## Quick Start
 
 ```bash
-npm install agentforge-core
+npm install @mandarnilange/agentforge-core
 export ANTHROPIC_API_KEY=sk-ant-...
 
 # Scaffold a starter .agentforge/ directory

@@ -1,16 +1,16 @@
 # AgentForge
 
 [![CI](https://github.com/mandarnilange/agentforge/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mandarnilange/agentforge/actions/workflows/ci.yml)
-[![npm agentforge-core](https://img.shields.io/npm/v/agentforge-core?label=agentforge-core&color=blue)](https://www.npmjs.com/package/agentforge-core)
-[![npm agentforge](https://img.shields.io/npm/v/agentforge?label=agentforge&color=blue)](https://www.npmjs.com/package/agentforge)
+[![npm @mandarnilange/agentforge-core](https://img.shields.io/npm/v/@mandarnilange/agentforge-core?label=%40mandarnilange%2Fagentforge-core&color=blue)](https://www.npmjs.com/package/@mandarnilange/agentforge-core)
+[![npm @mandarnilange/agentforge](https://img.shields.io/npm/v/@mandarnilange/agentforge?label=%40mandarnilange%2Fagentforge&color=blue)](https://www.npmjs.com/package/@mandarnilange/agentforge)
 [![License: MIT](https://img.shields.io/github/license/mandarnilange/agentforge?color=green)](LICENSE)
-[![Node ≥20](https://img.shields.io/node/v/agentforge-core?color=brightgreen)](package.json)
+[![Node ≥20](https://img.shields.io/node/v/@mandarnilange/agentforge-core?color=brightgreen)](package.json)
 
 **Kubernetes for AI agent workflows.** Declarative agent orchestration in YAML, with approval gates, artifact validation, and a real observability story.
 
 AgentForge lets engineering teams define agents and pipelines the way Kubernetes lets them define pods and deployments — and then handles the execution, state, and scheduling underneath. Ships with a reference SDLC template so you can see an end-to-end pipeline running in minutes. The framework is domain-agnostic: point it at code review, content generation, ops runbooks, data pipelines — anything where multiple LLM calls need to be coordinated with humans in the loop.
 
-> **Status:** v0.2.0 release candidate (`v0.2.0-rc.1`) — early-feedback build. API surface is stabilising but may still shift; `npm install @mandarnilange/agentforge` pulls the RC. Please [open an issue](https://github.com/mandarnilange/agentforge/issues) for anything that looks rough, or use [Discussions](https://github.com/mandarnilange/agentforge/discussions) for usage questions.
+> **Status:** v0.2.0 release candidate (`v0.2.0-rc.2`) — early-feedback build. API surface is stabilising but may still shift; `npm install @mandarnilange/agentforge` pulls the RC. Please [open an issue](https://github.com/mandarnilange/agentforge/issues) for anything that looks rough, or use [Discussions](https://github.com/mandarnilange/agentforge/discussions) for usage questions.
 
 ---
 
@@ -343,13 +343,13 @@ Deeper dive on step pipelines, template variables, and loop semantics: [`docs/ar
 
 ---
 
-## `agentforge` vs `agentforge-core`
+## `@mandarnilange/agentforge` vs `@mandarnilange/agentforge-core`
 
 Two npm packages ship from this repo. Pick based on your target environment.
 
-| | **`agentforge-core`** | **`@mandarnilange/agentforge`** (platform) |
+| | **`@mandarnilange/agentforge-core`** | **`@mandarnilange/agentforge`** (platform) |
 |---|---|---|
-| **Install** | `npm install agentforge-core` | `npm install @mandarnilange/agentforge` (pulls in core) |
+| **Install** | `npm install @mandarnilange/agentforge-core` | `npm install @mandarnilange/agentforge` (pulls in core) |
 | **Binary** | `agentforge-core` | `agentforge` |
 | **Intended for** | Local dev, evaluation, library embed | Production, teams, multi-host |
 | **LLM providers** | Anthropic | Anthropic + OpenAI + Gemini + Ollama |
@@ -363,7 +363,7 @@ Two npm packages ship from this repo. Pick based on your target environment.
 | **Multi-host deploy** | — | Control-plane + worker Docker Compose files |
 | **Docker image** | `ghcr.io/mandarnilange/agentforge-core` (~289 MB) | `ghcr.io/mandarnilange/agentforge-platform` (~336 MB) |
 
-**Rule of thumb:** start with `agentforge-core` if you want the smallest surface for experimentation or you're embedding AgentForge inside your own CLI. Otherwise install `agentforge` — defaults are identical for local dev (SQLite, local executor, Anthropic), and every production feature is available the day you need it. *You won't have to migrate.*
+**Rule of thumb:** start with `@mandarnilange/agentforge-core` if you want the smallest surface for experimentation or you're embedding AgentForge inside your own CLI. Otherwise install `@mandarnilange/agentforge` — defaults are identical for local dev (SQLite, local executor, Anthropic), and every production feature is available the day you need it. *You won't have to migrate.*
 
 Multi-provider setup (OpenAI, Gemini, Ollama): [`docs/multi-provider.md`](docs/multi-provider.md).
 
@@ -624,12 +624,12 @@ Everything is MIT-licensed. Contributions land under the same licence.
 
 ---
 
-## Using just the framework (`agentforge-core`)
+## Using just the framework (`@mandarnilange/agentforge-core`)
 
-If you're embedding the engine into your own CLI or service — or you want the framework without the platform binary, multi-provider middleware, or Postgres — install `agentforge-core` directly:
+If you're embedding the engine into your own CLI or service — or you want the framework without the platform binary, multi-provider middleware, or Postgres — install `@mandarnilange/agentforge-core` directly:
 
 ```bash
-npm install agentforge-core
+npm install @mandarnilange/agentforge-core
 npx agentforge-core init --template simple-sdlc
 ```
 

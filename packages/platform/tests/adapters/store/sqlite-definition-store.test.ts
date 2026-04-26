@@ -3,7 +3,7 @@ import type {
 	AgentDefinitionYaml,
 	NodeDefinitionYaml,
 	PipelineDefinitionYaml,
-} from "agentforge-core/definitions/parser.js";
+} from "@mandarnilange/agentforge-core/definitions/parser.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { SqliteDefinitionStore } from "../../../src/adapters/store/sqlite-definition-store.js";
 

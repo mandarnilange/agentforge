@@ -7,13 +7,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Readable } from "node:stream";
-import { resolveAgentforgeDir } from "agentforge-core/di/agentforge-dir.js";
+import { resolveAgentforgeDir } from "@mandarnilange/agentforge-core/di/agentforge-dir.js";
 import type {
 	AgentJob,
 	AgentJobResult,
 	IAgentExecutor,
 	StatusUpdate,
-} from "agentforge-core/domain/ports/agent-executor.port.js";
+} from "@mandarnilange/agentforge-core/domain/ports/agent-executor.port.js";
 
 /** Minimal Docker API interface (subset of dockerode) for testability. */
 export interface DockerApi {

@@ -1,10 +1,10 @@
-import type { NodeDefinitionYaml } from "agentforge-core/definitions/parser.js";
-import type { IExecutionBackend } from "agentforge-core/domain/ports/execution-backend.port.js";
+import type { NodeDefinitionYaml } from "@mandarnilange/agentforge-core/definitions/parser.js";
+import type { IExecutionBackend } from "@mandarnilange/agentforge-core/domain/ports/execution-backend.port.js";
 import type {
 	INodeRuntime,
 	NodeRunRequest,
 	NodeRunResult,
-} from "agentforge-core/domain/ports/node-runtime.port.js";
+} from "@mandarnilange/agentforge-core/domain/ports/node-runtime.port.js";
 
 export class LocalNodeRuntime implements INodeRuntime {
 	readonly nodeDefinition: NodeDefinitionYaml;

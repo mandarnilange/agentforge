@@ -1,6 +1,6 @@
 {
 	"name": "@mandarnilange/agentforge",
-	"version": "0.2.0-rc.1",
+	"version": "0.2.0-rc.2",
 	"description": "Production infrastructure for AgentForge — multi-provider LLMs, Docker/remote executors, Postgres state, full OTel, multi-node workers",
 	"type": "module",
 	"bin": {
@@ -56,7 +56,7 @@
 		"LICENSE"
 	],
 	"dependencies": {
-		"agentforge-core": "^0.2.0-rc.0",
+		"@mandarnilange/agentforge-core": "^0.2.0-rc.2",
 		"dockerode": "^4.0.10",
 		"pg": "^8.20.0",
 		"@opentelemetry/sdk-node": "^0.214.0",
@@ -66,6 +66,6 @@
 		"@opentelemetry/instrumentation-pg": "^0.66.0"
 	},
 	"peerDependencies": {
-		"agentforge-core": "^0.2.0-rc.0"
+		"@mandarnilange/agentforge-core": "^0.2.0-rc.2"
 	}
 }

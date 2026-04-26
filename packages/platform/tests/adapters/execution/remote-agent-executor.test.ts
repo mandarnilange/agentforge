@@ -7,7 +7,7 @@ import type {
 	AgentJob,
 	AgentJobResult,
 	StatusUpdate,
-} from "agentforge-core/domain/ports/agent-executor.port.js";
+} from "@mandarnilange/agentforge-core/domain/ports/agent-executor.port.js";
 import { afterEach, describe, expect, it } from "vitest";
 import { RemoteAgentExecutor } from "../../../src/adapters/execution/remote-agent-executor.js";
 

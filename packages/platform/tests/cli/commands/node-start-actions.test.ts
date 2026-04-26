@@ -8,7 +8,7 @@ import type {
 	AgentJobResult,
 	IAgentExecutor,
 	StatusUpdate,
-} from "agentforge-core/domain/ports/agent-executor.port.js";
+} from "@mandarnilange/agentforge-core/domain/ports/agent-executor.port.js";
 import { Command } from "commander";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {

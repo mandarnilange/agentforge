@@ -9,9 +9,9 @@
 import type {
 	RecoveryOptions,
 	RecoveryResult,
-} from "agentforge-core/domain/models/recovery.model.js";
-import type { IEventBus } from "agentforge-core/domain/ports/event-bus.port.js";
-import type { IStateStore } from "agentforge-core/domain/ports/state-store.port.js";
+} from "@mandarnilange/agentforge-core/domain/models/recovery.model.js";
+import type { IEventBus } from "@mandarnilange/agentforge-core/domain/ports/event-bus.port.js";
+import type { IStateStore } from "@mandarnilange/agentforge-core/domain/ports/state-store.port.js";
 
 export class PipelineRecoveryService {
 	constructor(

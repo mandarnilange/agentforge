@@ -12,8 +12,8 @@ import type {
 	AgentDefinitionYaml,
 	NodeDefinitionYaml,
 	PipelineDefinitionYaml,
-} from "agentforge-core/definitions/parser.js";
-import type { DefinitionStore } from "agentforge-core/definitions/store.js";
+} from "@mandarnilange/agentforge-core/definitions/parser.js";
+import type { DefinitionStore } from "@mandarnilange/agentforge-core/definitions/store.js";
 import Database from "better-sqlite3";
 
 export type DefinitionKind =

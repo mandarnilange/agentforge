@@ -3,6 +3,35 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0-rc.2] — Move both packages under `@mandarnilange/*`
+
+The framework package is now published as `@mandarnilange/agentforge-core`
+(was `agentforge-core`), matching the platform package's scope from
+rc.1. Both packages now live under one consistent npm scope, which
+keeps install paths uniform across docs and removes the lingering
+similarity-policy risk on the unscoped name.
+
+CLI binaries are unchanged — `agentforge-core` and `agentforge` keep
+their existing names; only the install paths carry the scope.
+
+The unscoped versions of `agentforge-core` (`0.2.0-rc.0` and
+`0.2.0-rc.1`) are deprecated on npm and direct installs to the new
+scoped name. Anyone who only depends on `@mandarnilange/agentforge`
+gets the new core transparently as a transitive dependency.
+
+This rc.2 also bundles `npm audit` fixes for the
+`fast-xml-parser` XML-injection advisory (moderate, transitive
+via the AWS SDK pulled in by OpenTelemetry exporters). No API
+surface change.
+
+The remaining two `npm audit` warnings are for `uuid <14.0.0` reached
+through `dockerode@4.x` (`@aws-sdk` no longer applies after the fix
+above). The advisory only affects `uuid.v3/v5/v6` when called with a
+pre-allocated `buf` argument; `dockerode` uses `uuid.v4()`, which is
+unaffected, so AgentForge is not exposed. `dockerode@5.x` removes the
+`uuid` dependency entirely — we'll bump to it in v0.3 once
+`@types/dockerode` ships v5 (currently at 4.0.1 on DefinitelyTyped).
+
 ## [0.2.0-rc.1] — Scope the platform package + retag
 
 The platform package is now published as `@mandarnilange/agentforge`

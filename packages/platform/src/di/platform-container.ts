@@ -1,12 +1,12 @@
 import type {
 	EventCallback,
 	ProgressCallback,
-} from "agentforge-core/adapters/execution/pi-ai-backend.js";
+} from "@mandarnilange/agentforge-core/adapters/execution/pi-ai-backend.js";
 import {
 	createBackendForExecutor,
 	type ExecutorType,
-} from "agentforge-core/di/container.js";
-import type { IExecutionBackend } from "agentforge-core/domain/ports/execution-backend.port.js";
+} from "@mandarnilange/agentforge-core/di/container.js";
+import type { IExecutionBackend } from "@mandarnilange/agentforge-core/domain/ports/execution-backend.port.js";
 import { ProviderAwareBackend } from "../adapters/execution/provider-aware-backend.js";
 
 export interface PlatformBackendOptions {

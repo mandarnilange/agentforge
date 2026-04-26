@@ -8,33 +8,33 @@
 import { mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { InMemoryEventBus } from "agentforge-core/adapters/events/in-memory-event-bus.js";
-import { setRuntimeDefinitionStore } from "agentforge-core/agents/definition-source.js";
-import { registerDashboardCommand } from "agentforge-core/cli/commands/dashboard.js";
-import { registerExecCommand } from "agentforge-core/cli/commands/exec.js";
-import { registerGateCommand } from "agentforge-core/cli/commands/gate.js";
-import { registerGetCommand } from "agentforge-core/cli/commands/get-pipeline.js";
-import { registerInfoCommand } from "agentforge-core/cli/commands/info.js";
-import { registerInitCommand } from "agentforge-core/cli/commands/init.js";
-import { registerListCommand } from "agentforge-core/cli/commands/list.js";
-import { registerLogsCommand } from "agentforge-core/cli/commands/logs.js";
-import { registerRunPipelineCommand } from "agentforge-core/cli/commands/run-pipeline.js";
-import { registerTemplatesCommand } from "agentforge-core/cli/commands/templates.js";
-import { GateController } from "agentforge-core/control-plane/gate-controller.js";
-import { PipelineController } from "agentforge-core/control-plane/pipeline-controller.js";
-import { LocalAgentScheduler } from "agentforge-core/control-plane/scheduler.js";
+import { InMemoryEventBus } from "@mandarnilange/agentforge-core/adapters/events/in-memory-event-bus.js";
+import { setRuntimeDefinitionStore } from "@mandarnilange/agentforge-core/agents/definition-source.js";
+import { registerDashboardCommand } from "@mandarnilange/agentforge-core/cli/commands/dashboard.js";
+import { registerExecCommand } from "@mandarnilange/agentforge-core/cli/commands/exec.js";
+import { registerGateCommand } from "@mandarnilange/agentforge-core/cli/commands/gate.js";
+import { registerGetCommand } from "@mandarnilange/agentforge-core/cli/commands/get-pipeline.js";
+import { registerInfoCommand } from "@mandarnilange/agentforge-core/cli/commands/info.js";
+import { registerInitCommand } from "@mandarnilange/agentforge-core/cli/commands/init.js";
+import { registerListCommand } from "@mandarnilange/agentforge-core/cli/commands/list.js";
+import { registerLogsCommand } from "@mandarnilange/agentforge-core/cli/commands/logs.js";
+import { registerRunPipelineCommand } from "@mandarnilange/agentforge-core/cli/commands/run-pipeline.js";
+import { registerTemplatesCommand } from "@mandarnilange/agentforge-core/cli/commands/templates.js";
+import { GateController } from "@mandarnilange/agentforge-core/control-plane/gate-controller.js";
+import { PipelineController } from "@mandarnilange/agentforge-core/control-plane/pipeline-controller.js";
+import { LocalAgentScheduler } from "@mandarnilange/agentforge-core/control-plane/scheduler.js";
 import type {
 	AgentDefinitionYaml,
 	NodeDefinitionYaml,
 	PipelineDefinitionYaml,
-} from "agentforge-core/definitions/parser.js";
-import { loadDefinitionsFromDir } from "agentforge-core/definitions/parser.js";
-import type { DefinitionStore } from "agentforge-core/definitions/store.js";
-import { createDefinitionStore } from "agentforge-core/definitions/store.js";
-import { traceStateStore } from "agentforge-core/observability/traced-state-store.js";
-import { setDiscoveredSchemas } from "agentforge-core/schemas/index.js";
-import { buildSchemaValidators } from "agentforge-core/schemas/schema-discovery.js";
-import { SqliteStateStore } from "agentforge-core/state/store.js";
+} from "@mandarnilange/agentforge-core/definitions/parser.js";
+import { loadDefinitionsFromDir } from "@mandarnilange/agentforge-core/definitions/parser.js";
+import type { DefinitionStore } from "@mandarnilange/agentforge-core/definitions/store.js";
+import { createDefinitionStore } from "@mandarnilange/agentforge-core/definitions/store.js";
+import { traceStateStore } from "@mandarnilange/agentforge-core/observability/traced-state-store.js";
+import { setDiscoveredSchemas } from "@mandarnilange/agentforge-core/schemas/index.js";
+import { buildSchemaValidators } from "@mandarnilange/agentforge-core/schemas/schema-discovery.js";
+import { SqliteStateStore } from "@mandarnilange/agentforge-core/state/store.js";
 import { Command } from "commander";
 import { PgDefinitionStore } from "./adapters/store/pg-definition-store.js";
 import { SqliteDefinitionStore } from "./adapters/store/sqlite-definition-store.js";
@@ -335,7 +335,7 @@ if (USE_POSTGRES && pgDefinitionStore) {
 
 // --- State Store (SQLite default, PostgreSQL via env) ---
 const STATE_DB_PATH = join(OUTPUT_DIR, ".agentforge-state.db");
-let stateStore: import("agentforge-core/domain/ports/state-store.port.js").IStateStore;
+let stateStore: import("@mandarnilange/agentforge-core/domain/ports/state-store.port.js").IStateStore;
 
 if (USE_POSTGRES) {
 	const { PostgresStateStore } = await import("./state/pg-store.js");
@@ -375,20 +375,24 @@ const rateLimiter = new PipelineRateLimiter(stateStore, {
 
 // Load config up front so stopPipeline() can wire the executor into the
 // controller and actually abort in-flight runs (P18-T17).
-let appConfig: import("agentforge-core/di/config.js").AppConfig | undefined;
+let appConfig:
+	| import("@mandarnilange/agentforge-core/di/config.js").AppConfig
+	| undefined;
 try {
-	const { loadConfig } = await import("agentforge-core/di/config.js");
+	const { loadConfig } = await import(
+		"@mandarnilange/agentforge-core/di/config.js"
+	);
 	appConfig = loadConfig();
 } catch {
 	// Config not available — dashboard runs without execution capability
 }
 
 let agentExecutor:
-	| import("agentforge-core/domain/ports/agent-executor.port.js").IAgentExecutor
+	| import("@mandarnilange/agentforge-core/domain/ports/agent-executor.port.js").IAgentExecutor
 	| undefined;
 if (appConfig) {
 	const { createAgentExecutor } = await import(
-		"agentforge-core/di/executor-factory.js"
+		"@mandarnilange/agentforge-core/di/executor-factory.js"
 	);
 	agentExecutor = createAgentExecutor("local", { config: appConfig });
 }
@@ -413,7 +417,7 @@ const _recoveryService = new PipelineRecoveryService(stateStore, eventBus, {
 
 // Node health monitoring
 const { createMetricsRecorder } = await import(
-	"agentforge-core/observability/metrics.js"
+	"@mandarnilange/agentforge-core/observability/metrics.js"
 );
 const metrics = createMetricsRecorder();
 const noopBackend = {

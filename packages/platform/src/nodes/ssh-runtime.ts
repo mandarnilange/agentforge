@@ -1,12 +1,12 @@
 import { execFile } from "node:child_process";
 import { connect } from "node:net";
 import { promisify } from "node:util";
-import type { NodeDefinitionYaml } from "agentforge-core/definitions/parser.js";
+import type { NodeDefinitionYaml } from "@mandarnilange/agentforge-core/definitions/parser.js";
 import type {
 	INodeRuntime,
 	NodeRunRequest,
 	NodeRunResult,
-} from "agentforge-core/domain/ports/node-runtime.port.js";
+} from "@mandarnilange/agentforge-core/domain/ports/node-runtime.port.js";
 
 const execFileAsync = promisify(execFile);
 

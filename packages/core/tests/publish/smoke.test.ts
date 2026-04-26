@@ -15,8 +15,8 @@ const pkg = JSON.parse(
 
 describe("agentforge-core publish readiness", () => {
 	describe("package.json metadata", () => {
-		it("has unscoped package name", () => {
-			expect(pkg.name).toBe("agentforge-core");
+		it("has the published scoped package name", () => {
+			expect(pkg.name).toBe("@mandarnilange/agentforge-core");
 		});
 
 		it("has a version", () => {

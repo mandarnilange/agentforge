@@ -8,7 +8,7 @@ import type {
 	AgentDefinitionYaml,
 	NodeDefinitionYaml,
 	PipelineDefinitionYaml,
-} from "agentforge-core/definitions/parser.js";
+} from "@mandarnilange/agentforge-core/definitions/parser.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockQuery, mockEnd } = vi.hoisted(() => ({
