@@ -13,16 +13,16 @@ npm install @mandarnilange/agentforge-core
 export ANTHROPIC_API_KEY=sk-ant-...
 
 # Scaffold a starter .agentforge/ directory
-npx agentforge-core init --template simple-sdlc
+npx @mandarnilange/agentforge-core init --template simple-sdlc
 
 # Run a single agent
-npx agentforge-core exec analyst --input "Build a freelance invoicing SaaS"
+npx @mandarnilange/agentforge-core exec analyst --input "Build a freelance invoicing SaaS"
 
 # Run the full pipeline
-npx agentforge-core run --project my-app --input "brief=Build a freelance invoicing SaaS"
+npx @mandarnilange/agentforge-core run --project my-app --input "brief=Build a freelance invoicing SaaS"
 
 # Start the web dashboard
-npx agentforge-core dashboard
+npx @mandarnilange/agentforge-core dashboard
 # Open http://localhost:3001
 ```
 
@@ -232,7 +232,7 @@ Ships with **45 built-in schemas** covering requirements, architecture, code, da
 | **architect** | 2 | Architect | architecture plan |
 | **developer** | 3 | Developer | code output |
 
-Scaffold it with `npx agentforge-core init --template simple-sdlc`. These are YAML definitions — modify them, extend them, or build your own from scratch.
+Scaffold it with `npx @mandarnilange/agentforge-core init --template simple-sdlc`. These are YAML definitions — modify them, extend them, or build your own from scratch.
 
 ## CLI Reference
 

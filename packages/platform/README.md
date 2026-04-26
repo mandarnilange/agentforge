@@ -19,7 +19,7 @@ export AGENTFORGE_STATE_STORE=postgres
 export AGENTFORGE_POSTGRES_URL=postgres://user:pass@localhost:5432/agentforge
 export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 
-npx agentforge dashboard
+npx @mandarnilange/agentforge dashboard
 ```
 
 ### Docker (Full Stack)
