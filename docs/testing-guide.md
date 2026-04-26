@@ -49,7 +49,7 @@ Validates CLI wiring, config loading, and agent registration without calling the
 
 ```bash
 # Scaffold the simple-sdlc template into .agentforge/
-npx agentforge init --template simple-sdlc
+npx @mandarnilange/agentforge init --template simple-sdlc
 
 # Dry run any agent
 npx tsx packages/core/src/cli/index.ts exec analyst --input "Build a SaaS invoicing app" --dry-run

@@ -53,16 +53,16 @@ npm install @mandarnilange/agentforge
 export ANTHROPIC_API_KEY=sk-ant-...
 
 # 3. Scaffold the reference template into .agentforge/
-npx agentforge init --template simple-sdlc
+npx @mandarnilange/agentforge init --template simple-sdlc
 
 # 4. Run a single agent against a brief
-npx agentforge exec analyst --input "Build a freelance invoicing SaaS"
+npx @mandarnilange/agentforge exec analyst --input "Build a freelance invoicing SaaS"
 
 # 5. Run the full pipeline (approval gates between phases)
-npx agentforge run --project my-app --input "brief=Build a freelance invoicing SaaS"
+npx @mandarnilange/agentforge run --project my-app --input "brief=Build a freelance invoicing SaaS"
 
 # 6. Open the dashboard to watch it live
-npx agentforge dashboard
+npx @mandarnilange/agentforge dashboard
 # → http://localhost:3001
 ```
 
@@ -386,7 +386,7 @@ Three ways to run AgentForge, smallest to largest. Same YAML, same binary — on
 └─────────────────────────────────────────────────┘
 ```
 
-For evaluation, demos, and most small projects. `npx agentforge dashboard` starts everything. If you prefer running it in Docker without Postgres or OTel:
+For evaluation, demos, and most small projects. `npx @mandarnilange/agentforge dashboard` starts everything. If you prefer running it in Docker without Postgres or OTel:
 
 ```bash
 docker compose up -d                                  # Dashboard at :3001
@@ -517,7 +517,7 @@ A React SPA served by the same binary. Real-time pipeline view via Server-Sent E
 - PDF export of a completed run
 
 ```bash
-npx agentforge dashboard --port 3001
+npx @mandarnilange/agentforge dashboard --port 3001
 ```
 
 When `ANTHROPIC_API_KEY` isn't set, the dashboard renders a read-only banner — useful for browsing completed runs.
@@ -630,7 +630,7 @@ If you're embedding the engine into your own CLI or service — or you want the 
 
 ```bash
 npm install @mandarnilange/agentforge-core
-npx agentforge-core init --template simple-sdlc
+npx @mandarnilange/agentforge-core init --template simple-sdlc
 ```
 
 Same YAML schema, same executors, same control plane. You wire your own entry point. Package-level docs: [`packages/core/README.md`](packages/core/README.md).
