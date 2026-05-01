@@ -8,9 +8,13 @@
 
 **An open framework for agentic workflows. Bring your process, LLMs, scripts, agents, and infra — we handle the orchestration.**
 
-Compose agent harnesses in YAML from LLM calls, scripts, validators, and transforms — wired with loops and conditionals. Mix deterministic and non-deterministic steps so your linter, tests, and schemas gate the LLM. Built-in support for Anthropic / OpenAI / Gemini / Ollama, coding-agent runtimes, SQLite / Postgres, OTel, and local / Docker / remote workers. Every layer has an extension point where the built-in doesn't fit. Scale agentic workflows like production infrastructure.
+- **Compose** agent harnesses in YAML — LLM calls, scripts, validators, transforms, loops, and conditionals.
+- **Gate the LLM with your tools** — deterministic steps (linters, tests, schemas) wrap non-deterministic LLM calls, so output is checked on every run.
+- **Plug in your stack** — Anthropic, OpenAI, Gemini, Ollama, coding-agent runtimes. Every layer has an extension point where the built-in doesn't fit.
+- **Run anywhere** — local, Docker, or remote workers; SQLite or Postgres; OTel-native.
+- **Scale like infra** — multi-worker scheduling, approval gates, cost ceilings, live dashboard.
 
-Ships with a reference SDLC template so you can see an end-to-end pipeline running in minutes. The framework is domain-agnostic: point it at code review, content generation, ops runbooks, data pipelines — anything where multiple LLM calls need to be coordinated with humans in the loop.
+Ships with a reference SDLC template — runnable end-to-end in minutes. Domain-agnostic: point it at code review, content generation, ops runbooks, data pipelines — anywhere multiple LLM calls need to be coordinated with humans in the loop.
 
 > **For platform teams:** think of it as Kubernetes-style orchestration for agentic workloads — control plane, execution plane, declarative specs — without the cluster.
 

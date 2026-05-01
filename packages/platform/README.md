@@ -1,8 +1,8 @@
 # @mandarnilange/agentforge
 
-**Production infrastructure for AgentForge.** Distributed execution, PostgreSQL, full observability, crash recovery.
+**Production infrastructure for AgentForge.** Run agentic workflows at scale — distributed execution, PostgreSQL, full observability, crash recovery.
 
-Extends [@mandarnilange/agentforge-core](https://www.npmjs.com/package/@mandarnilange/agentforge-core) with everything needed to run AI agent workflows at scale — Docker/remote executors, PostgreSQL persistence, OpenTelemetry tracing, rate limiting, and multi-node worker scheduling.
+Extends [@mandarnilange/agentforge-core](https://www.npmjs.com/package/@mandarnilange/agentforge-core) — the open framework for agentic workflows — with everything needed to run it at scale: Docker / remote executors, PostgreSQL persistence, OpenTelemetry tracing, rate limiting, and multi-node worker scheduling. Bring your own LLMs, scripts, agents, and infra; this package handles the orchestration plane.
 
 > **Note:** This package requires `@mandarnilange/agentforge-core` as a peer dependency. The platform listing depends on it directly, so a single install pulls both:
 > ```bash
