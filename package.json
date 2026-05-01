@@ -2,7 +2,7 @@
 	"name": "agentforge-monorepo",
 	"version": "0.2.0-rc.2",
 	"private": true,
-	"description": "AgentForge — Kubernetes for AI agent workflows",
+	"description": "AgentForge — open framework for agentic workflows. Bring your process, LLMs, scripts, agents, and infra; we handle the orchestration.",
 	"type": "module",
 	"workspaces": [
 		"packages/core",

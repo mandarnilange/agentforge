@@ -1,7 +1,7 @@
 {
 	"name": "@mandarnilange/agentforge-core",
 	"version": "0.2.0-rc.2",
-	"description": "AgentForge core: Kubernetes-style control plane for AI agent workflows — declarative YAML agents, pipelines, gates, and state",
+	"description": "AgentForge core: open framework for agentic workflows — compose agent harnesses from LLMs, scripts, and loops in declarative YAML; mix deterministic and non-deterministic steps; pluggable at every layer",
 	"type": "module",
 	"bin": {
 		"agentforge-core": "./dist/cli/index.js"

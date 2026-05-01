@@ -1,8 +1,8 @@
 # @mandarnilange/agentforge-core
 
-**Kubernetes for AI agent workflows.** The core orchestration framework.
+**An open framework for agentic workflows.** The core orchestration package.
 
-Define agents and pipelines in YAML — AgentForge handles execution, artifact chaining, approval gates, and state management. Like Kubernetes for containers, AgentForge is the control plane for AI agent workloads.
+Compose agent harnesses in YAML — LLM calls, scripts, validators, and transforms wired with loops and conditionals. Mix deterministic and non-deterministic steps; bring your own LLM provider, agent runtime, scripts, and tools. AgentForge handles execution, artifact chaining, approval gates, and state management.
 
 Ships with a minimal `simple-sdlc` starter template (analyst → architect → developer) to get you up and running. The framework is general-purpose — define your own agents and pipelines for any domain.
 
