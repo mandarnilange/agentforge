@@ -2,7 +2,7 @@
 
 **Production infrastructure for AgentForge.** Run agentic workflows at scale — distributed execution, PostgreSQL, full observability, crash recovery.
 
-Extends [@mandarnilange/agentforge-core](https://www.npmjs.com/package/@mandarnilange/agentforge-core) — the open framework for agentic workflows — with everything needed to run it at scale: Docker / remote executors, PostgreSQL persistence, OpenTelemetry tracing, rate limiting, and multi-node worker scheduling. Bring your own LLMs, scripts, agents, and infra; this package handles the orchestration plane.
+Extends [@mandarnilange/agentforge-core](https://www.npmjs.com/package/@mandarnilange/agentforge-core) — the open framework for agentic workflows — with everything needed to run it at scale: Docker / remote executors, PostgreSQL persistence, OpenTelemetry tracing, rate limiting, and multi-node worker scheduling. Bring your own LLMs, scripts, agents, and infra; this package is the Kubernetes-style orchestration plane underneath — control plane + capability-scheduled workers, declarative specs, no cluster required.
 
 > **Note:** This package requires `@mandarnilange/agentforge-core` as a peer dependency. The platform listing depends on it directly, so a single install pulls both:
 > ```bash
@@ -117,6 +117,8 @@ docker compose -f packages/platform/docker-compose.worker.yml up -d
 ```
 
 ## Architecture
+
+Platform borrows Kubernetes' separation of concerns — a **control plane** decides what runs where, an **execution plane** of nodes runs it. Both ship in this package; deploy them together on one host or split across machines (see *Distributed* in Quick Start above). Nodes advertise capabilities (`llm-access`, `docker`, `high-memory`, `git`, …) and the scheduler matches each agent's `nodeAffinity` to the pool — same mental model as Pod scheduling.
 
 Platform extends core via its ports/adapters pattern:
 
