@@ -6,9 +6,13 @@
 [![License: MIT](https://img.shields.io/github/license/mandarnilange/agentforge?color=green)](LICENSE)
 [![Node ≥20](https://img.shields.io/node/v/@mandarnilange/agentforge-core?color=brightgreen)](package.json)
 
-**Kubernetes for AI agent workflows.** Declarative agent orchestration in YAML, with approval gates, artifact validation, and a real observability story.
+**An open framework for agentic workflows. Bring your process, LLMs, scripts, agents, and infra — we handle the orchestration.**
 
-AgentForge lets engineering teams define agents and pipelines the way Kubernetes lets them define pods and deployments — and then handles the execution, state, and scheduling underneath. Ships with a reference SDLC template so you can see an end-to-end pipeline running in minutes. The framework is domain-agnostic: point it at code review, content generation, ops runbooks, data pipelines — anything where multiple LLM calls need to be coordinated with humans in the loop.
+Compose agent harnesses in YAML from LLM calls, scripts, validators, and transforms — wired with loops and conditionals. Mix deterministic and non-deterministic steps so your linter, tests, and schemas gate the LLM. Built-in support for Anthropic / OpenAI / Gemini / Ollama, coding-agent runtimes, SQLite / Postgres, OTel, and local / Docker / remote workers. Every layer has an extension point where the built-in doesn't fit. Scale agentic workflows like production infrastructure.
+
+Ships with a reference SDLC template so you can see an end-to-end pipeline running in minutes. The framework is domain-agnostic: point it at code review, content generation, ops runbooks, data pipelines — anything where multiple LLM calls need to be coordinated with humans in the loop.
+
+> **For platform teams:** think of it as Kubernetes-style orchestration for agentic workloads — control plane, execution plane, declarative specs — without the cluster.
 
 > **Status:** v0.2.0 release candidate (`v0.2.0-rc.2`) — early-feedback build. API surface is stabilising but may still shift; `npm install @mandarnilange/agentforge` pulls the RC. Please [open an issue](https://github.com/mandarnilange/agentforge/issues) for anything that looks rough, or use [Discussions](https://github.com/mandarnilange/agentforge/discussions) for usage questions.
 
