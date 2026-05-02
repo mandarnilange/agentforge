@@ -1,127 +1,120 @@
-# Your First AgentForge Run — Skill Quickstart
+# Skill Quickstart
 
-> 5-minute path from zero to your first agentic pipeline using the
-> [`agentforge-workflow`](../skills/agentforge-workflow/SKILL.md) skill.
-
-This file is **editable**. Fill in the bracketed sections, paste them into
-your AI coding agent (Claude Code / Cursor / Codex), and the skill takes
-over.
+5 minutes, four steps, zero YAML. You talk; the skill writes the
+pipeline.
 
 ---
 
-## 1. One-time setup
+## 1. Install the skill
 
 ```bash
-# Install the framework (core is enough for most starter pipelines)
 npm install @mandarnilange/agentforge-core
-
-# Install the skills into your AI coding agent
 npx skills add mandarnilange/agentforge
-
-# Set your LLM key
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-> Already have `@mandarnilange/agentforge` (the platform binary) installed?
-> The skills work the same way; just use `agentforge` instead of
-> `agentforge-core` in the commands below.
+That installs three skills into your AI coding agent:
+
+| Skill | What it does |
+|---|---|
+| `agentforge-workflow` | Designs your pipeline and writes `.agentforge/` |
+| `agentforge-template-author` | (For contributors) ships a new template upstream |
+| `agentforge-debug` | Triages a stuck or failing run |
 
 ---
 
-## 2. Drop in the starter `.agentforge/` (optional)
+## 2. Open your AI coding agent
 
-If your project owner shared a default `.agentforge/` directory, copy it
-into your project root before continuing.
-
-If not, leave it out — the skill will design one from scratch in step 4.
-
----
-
-## 3. Fill in your project brief
-
-✏️ **Edit the section between the markers below.** Anything in `<...>` is
-a placeholder.
-
-<!-- BEGIN BRIEF -->
-
-**Goal**
-> <One sentence: what should this pipeline produce?>
-
-**Inputs**
-> <What you feed the pipeline — a brief, a URL, a code repo, a dataset, a ticket>
-
-**Output artifacts**
-> <Files / decisions / code the workflow should hand back>
-
-**Hard constraints**
-> <Budget, deadline, must-run-locally, regulated domain, must-be-airgapped, etc. Or "none">
-
-**Starting point**
-> <One of: "use the .agentforge starter as-is", "extend the .agentforge starter", "design from scratch", or name a shipped template like "start from simple-sdlc">
-
-<!-- END BRIEF -->
+Any of these works the same way — **Claude Code, Cursor, Codex, Aider,
+Continue.dev**. Open the agent in your project folder. The skills
+auto-load; no restart needed.
 
 ---
 
-## 4. Trigger the skill
+## 3. Tell the skill what you want
 
-Open your AI coding agent in this project. Paste:
+Type a one- or two-sentence description of what you're trying to build.
+The `agentforge-workflow` skill catches the trigger and asks any
+follow-ups it needs (inputs, outputs, gates, budgets, parallelism).
 
-> Help me set up my AgentForge workflow. Here is my brief — please use the
-> `agentforge-workflow` skill.
->
-> *(paste the BRIEF section above)*
+Try one of these as a starting prompt:
 
-The skill walks through any clarifying questions, recommends a starting
-template if one fits, and emits a complete `.agentforge/` directory.
+**Classic SDLC pipeline**
+> Help me design an AgentForge pipeline that turns a product brief into
+> requirements, an architecture plan, and working code. I want a human
+> approval gate after the architecture phase.
 
-> **What the skill will and will not do** — by default it *creates new
-> files alongside* anything that already exists. It only edits existing
-> agents / pipelines / prompts when you explicitly say *update*, *edit*,
-> *modify*, *extend*, or *rewrite* (or name a specific file). Per-file
-> confirmation before any edit. See the
-> [Modification policy](../skills/agentforge-workflow/SKILL.md#modification-policy)
-> for the full rules.
+**Content generation with self-review**
+> Build me an AgentForge workflow for producing research-backed blog
+> posts: research the topic, write an outline, draft the post, and
+> self-review for quality before handing me the final version.
+
+**Code review pipeline**
+> I want an AgentForge pipeline that reviews a PR diff and produces
+> severity-tagged review comments plus a security risk score. The
+> reviewers should run in parallel.
+
+**Something brand new**
+> Design an AgentForge workflow for triaging incoming customer-support
+> tickets — classify by category, draft a response, route urgent ones
+> to a human gate.
+
+What the skill does next:
+
+- Recommends a shipped template if one fits (`simple-sdlc`,
+  `content-generation`, `code-review`, `data-pipeline`,
+  `seo-review`, `api-builder`).
+- Asks any clarifying questions about your inputs, outputs, gates,
+  budgets, parallelism.
+- Writes a complete `.agentforge/` directory into your project root.
 
 ---
 
-## 5. Run your first pipeline
+## 4. Run the pipeline the skill built
+
+When the skill finishes it tells you the exact commands. They look like:
 
 ```bash
-# Validate the .agentforge/ the skill produced
+# Validate what got generated
 npx @mandarnilange/agentforge-core list
 
-# Run it
+# Run it (replace the brief with your real input)
 npx @mandarnilange/agentforge-core run \
   --project my-first-run \
-  --input "brief=<paste your brief here>"
+  --input "brief=Build a freelance invoicing SaaS"
 
-# Watch it live
+# Watch the run live
 npx @mandarnilange/agentforge-core dashboard      # → http://localhost:3001
 ```
 
----
-
-## 6. Iterate
-
-To evolve the pipeline later, ask the same agent:
-
-- *"Add a new agent for security review after the architect."* → adds a
-  new agent file, no existing files touched.
-- *"Update the analyst agent to use `claude-haiku-4-5`."* → asks for
-  per-file confirmation, then edits.
-- *"Add a parallel test-generation phase."* → new pipeline file or
-  modification, with confirmation.
-- *"My run is stuck at phase 2."* → fires
-  [`agentforge-debug`](../skills/agentforge-debug/SKILL.md) to triage.
+That's the full loop.
 
 ---
 
-## What success looks like
+## What else you can do, conversationally
 
-- A complete `.agentforge/` directory in your project root.
-- A green run with artifacts under `output/`.
-- A dashboard view at <http://localhost:3001> showing the run timeline.
+The skills are designed to keep working with you across sessions. Some
+prompts that keep paying off:
 
-If anything looks off, ask your agent: *"why is pipeline `<run-id>`
-failing?"* — `agentforge-debug` takes it from there.
+- **Add a new agent** — *"Add a security review agent after the
+  architect."* → creates a new agent file; existing ones untouched.
+- **Tweak an existing agent** — *"Update the analyst agent to use
+  `claude-haiku-4-5`."* → asks you to confirm per file before editing.
+- **Add parallelism** — *"Run the test generator and the code generator
+  in parallel."* → modifies the pipeline (with confirmation).
+- **Insert a gate** — *"I want to review before code generation
+  starts."* → adds a gate to the relevant phase.
+- **Debug a run** — *"Why is pipeline `<run-id>` stuck at phase 2?"* →
+  fires `agentforge-debug` to triage.
+- **Ship a new template upstream** — *"Help me contribute a new template
+  for ML pipeline scaffolding."* → fires `agentforge-template-author`.
+
+---
+
+## Heads up
+
+By default the workflow skill **creates new files alongside existing
+ones** — it never silently overwrites your `.agentforge/`. To edit
+something that already exists, say *update / edit / modify / extend* (or
+name the file). The skill confirms each edit before writing. Full rules:
+[Modification policy](../skills/agentforge-workflow/SKILL.md#modification-policy).
