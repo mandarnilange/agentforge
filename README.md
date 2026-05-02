@@ -231,10 +231,11 @@ npx skills add mandarnilange/agentforge
 | Skill | Audience | What it does |
 |---|---|---|
 | `agentforge-workflow` | End user | Walks through designing an AgentForge workflow and emits a complete `.agentforge/` directory. |
-| `agentforge-template-author` | Contributor | Guides adding a new shipped template under `packages/{core,platform}/src/templates/`. |
+| `agentforge-cli` | Operator | Conversational interface to the AgentForge CLI — run, monitor, approve gates, apply YAML. |
 | `agentforge-debug` | Operator | Triages stuck or failing pipeline runs from symptom to fix path. |
+| `agentforge-template-author` | Contributor | Guides adding a new shipped template under `packages/{core,platform}/src/templates/`. |
 
-Trigger phrases live in each skill's frontmatter — e.g. *"help me design an AgentForge pipeline for PR triage"* fires `agentforge-workflow`; *"why is pipeline X stuck?"* fires `agentforge-debug`.
+Trigger phrases live in each skill's frontmatter — e.g. *"help me design a PR-triage pipeline"* fires `agentforge-workflow`, *"approve the architect gate"* fires `agentforge-cli`, *"why is pipeline X stuck?"* fires `agentforge-debug`.
 
 **New here?** The [Skill Quickstart](docs/skill-quickstart.md) is a 5-minute, fill-in-the-blanks markdown you edit, paste into your AI agent, and run. Catalog, changelog, and authoring docs: [`skills/`](skills/).
 

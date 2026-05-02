@@ -13,13 +13,14 @@ npx skills add mandarnilange/agentforge
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-That installs three skills into your AI coding agent:
+That installs four skills into your AI coding agent:
 
 | Skill | What it does |
 |---|---|
 | `agentforge-workflow` | Designs your pipeline and writes `.agentforge/` |
-| `agentforge-template-author` | (For contributors) ships a new template upstream |
+| `agentforge-cli` | Runs the CLI for you — *"run my pipeline"*, *"approve gate X"*, *"show me logs"* |
 | `agentforge-debug` | Triages a stuck or failing run |
+| `agentforge-template-author` | (For contributors) ships a new template upstream |
 
 ---
 
@@ -72,7 +73,10 @@ What the skill does next:
 
 ## 4. Run the pipeline the skill built
 
-When the skill finishes it tells you the exact commands. They look like:
+You have two paths:
+
+**Path A — type the commands yourself** (the skill prints them when it
+finishes):
 
 ```bash
 # Validate what got generated
@@ -86,6 +90,14 @@ npx @mandarnilange/agentforge-core run \
 # Watch the run live
 npx @mandarnilange/agentforge-core dashboard      # → http://localhost:3001
 ```
+
+**Path B — let the `agentforge-cli` skill do it for you.** Just say:
+
+> *Run the pipeline for project `my-first-run` with the brief
+> "Build a freelance invoicing SaaS". Then start the dashboard.*
+
+The skill maps your ask to the right CLI command, confirms before
+spending money, and reports the run ID and dashboard URL when it's up.
 
 That's the full loop.
 
@@ -104,6 +116,13 @@ prompts that keep paying off:
   in parallel."* → modifies the pipeline (with confirmation).
 - **Insert a gate** — *"I want to review before code generation
   starts."* → adds a gate to the relevant phase.
+- **Approve / reject / revise a gate** — *"Approve the architect gate on
+  the SDLC run."* → fires `agentforge-cli` (with cost-aware confirmation
+  before approval).
+- **List, inspect, monitor** — *"Show me current pipeline runs."* /
+  *"Any pending gates?"* / *"What nodes are online?"* → `agentforge-cli`.
+- **Apply YAML to the platform** — *"Apply every YAML in `.agentforge/`
+  to the cluster."* → `agentforge-cli` with `apply -f`.
 - **Debug a run** — *"Why is pipeline `<run-id>` stuck at phase 2?"* →
   fires `agentforge-debug` to triage.
 - **Ship a new template upstream** — *"Help me contribute a new template
