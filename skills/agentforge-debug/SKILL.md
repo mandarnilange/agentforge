@@ -12,7 +12,7 @@ description: >
 license: MIT
 metadata:
   author: mandarnilange
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
 # AgentForge Pipeline Debug
@@ -126,23 +126,45 @@ reversible action first**, then escalating options.
 
 For example, on a schema-invalid failure:
 1. Inspect the agent's last LLM output via dashboard or logs.
-2. If the LLM hallucinated a missing field, the prompt likely needs a
-   tightening — propose a one-line addition to `prompts/<agent>.system.md`.
-3. If the schema itself is wrong, point at the schema file and propose the
-   minimum change.
-4. Re-run only the failed agent: `agentforge run --continue <run-id>`.
+2. If the LLM hallucinated a missing field, propose tightening
+   `prompts/<agent>.system.md` — but **do not edit the file yet**. State
+   the proposed change in chat first.
+3. If the schema itself is wrong, point at the schema file and propose
+   the minimum change. Again, do not edit yet.
+4. Re-run only the failed agent: `agentforge run --continue <run-id>` —
+   only after the user authorises.
 
 Do not skip to "abort and re-start the pipeline" unless the run is
 unrecoverable.
 
-### 5. Confirm before mutating state
+### 5. Confirm before mutating state OR editing files
 
-Any action that changes shared state — approving a gate, cancelling a run,
-re-running an agent, force-clearing a stuck claim — requires explicit user
-confirmation. State your understanding, the proposed action, and the
-expected outcome. Wait.
+Two categories of confirmation:
 
-Read-only investigation does not need confirmation.
+**State mutation** — approving a gate, cancelling a run, re-running an
+agent, force-clearing a stuck claim. State your understanding, the
+proposed action, and the expected outcome. Wait.
+
+**File edits** — modifying a prompt, a schema, an agent / pipeline /
+node YAML, or anything else under `.agentforge/`. **Default to creating
+a new file alongside the existing one** if your fix involves a substantive
+rewrite (e.g. a redesigned prompt). For surgical changes (one-line tweak),
+ask explicit confirmation per file.
+
+Use `AskUserQuestion` (Claude Code) or the host agent's interactive-prompt
+tool when available. Otherwise, propose in chat and wait for a yes/no:
+
+> *"Proposed change to `prompts/analyst.system.md`: add 'You MUST include
+> a `summary` field in your output JSON.' as a new sentence at the end of
+> the 'Output contract' section. Apply this edit? (y/n)"*
+
+One question per file. Read-only investigation (running `agentforge get
+...` commands, reading logs, inspecting the dashboard) does **not** need
+confirmation.
+
+**Never silently overwrite** a prompt, schema, or agent file. The user's
+prior version may be the "right" version; your proposed edit is a
+hypothesis until they accept it.
 
 ## Hard rules
 
@@ -157,6 +179,11 @@ Read-only investigation does not need confirmation.
   disagree, the state store is the source of truth — read it directly.
 - **Propose one fix at a time.** Avoid stacked changes that make it
   impossible to know which one solved the problem.
+- **Confirm every file edit explicitly.** Use `AskUserQuestion` or the
+  host agent's interactive-prompt tool. Default to creating a new file
+  alongside the existing one for substantive rewrites; one-line tweaks
+  may edit in place after explicit confirmation. Never overwrite
+  silently.
 
 ## What success looks like
 

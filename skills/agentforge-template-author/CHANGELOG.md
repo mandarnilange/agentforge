@@ -1,5 +1,20 @@
 # `agentforge-template-author` changelog
 
+## 0.2.0 — 2026-05-02
+
+- Added a **Modification policy** section. Default behaviour is *create
+  a new template directory*. Editing a shipped template, the registry,
+  an existing test, or `docs/templates.md` requires explicit user intent
+  ("update", "edit", "modify") and per-file confirmation via
+  `AskUserQuestion` or the host agent's interactive-prompt tool. Editing
+  a shipped template is flagged as a **breaking change** because end
+  users `agentforge init --template <name>` against it.
+- When the user's request overlaps with an existing template but they
+  haven't asked to edit it, the skill now defaults to forking
+  (`<name>-secure`, `<name>-v2`) instead of in-place modification.
+- Added the rule to the *Hard rules* list.
+- No trigger-condition changes.
+
 ## 0.1.0 — 2026-05-02
 
 Initial release.

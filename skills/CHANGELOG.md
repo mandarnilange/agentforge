@@ -41,6 +41,24 @@ next install.
 
 - _add entries here as they merge_
 
+### 2026-05-02 (modification policy sweep)
+
+- **`agentforge-workflow` 0.2.0** — added a Modification policy:
+  default to creating new files; require per-file confirmation
+  (`AskUserQuestion` or equivalent) before editing existing agents /
+  pipelines / nodes / prompts / schemas. Per-skill changelog:
+  [`agentforge-workflow/CHANGELOG.md`](agentforge-workflow/CHANGELOG.md).
+- **`agentforge-template-author` 0.2.0** — same policy, applied to shipped
+  templates: default to forking when the user hasn't asked to edit;
+  in-place edits to a shipped template are flagged as a breaking change.
+  See [`agentforge-template-author/CHANGELOG.md`](agentforge-template-author/CHANGELOG.md).
+- **`agentforge-debug` 0.2.0** — same policy, applied to fix-path edits
+  (prompts, schemas). Existing state-mutation confirmation rule
+  preserved. See [`agentforge-debug/CHANGELOG.md`](agentforge-debug/CHANGELOG.md).
+
+Bump rationale: minor version. New behavioural guidance, additive prose
+in `SKILL.md` and the *Hard rules* list. Trigger conditions unchanged.
+
 ### 2026-05-02
 
 - **`agentforge-template-author` 0.1.0** — initial release. Guides

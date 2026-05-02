@@ -11,7 +11,7 @@ description: >
 license: MIT
 metadata:
   author: mandarnilange
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
 # AgentForge Workflow
@@ -163,13 +163,66 @@ schema — do not over-specify; the agent fills it in.
 
 ### 8. Emit the scaffold
 
-Write the full directory per `references/scaffold.md`. After writing:
+Write the full directory per `references/scaffold.md`. **Default to creating
+new files** — see the *Modification policy* below before touching anything
+that already exists. After writing:
 
 1. Tell the user the exact CLI command to validate it
    (`npx @mandarnilange/agentforge validate` from the project root).
 2. Show the run command for their pipeline
    (`npx @mandarnilange/agentforge run-pipeline <name> --input ...`).
 3. Stop. Do not run the pipeline yourself unless the user asks.
+
+## Modification policy
+
+**Default behaviour: create new files. Never overwrite or edit existing
+agent / pipeline / node / prompt / schema files unless the user has
+explicitly asked you to "update", "edit", "modify", "fix", or "rewrite"
+the existing one.**
+
+Before this skill runs, scan `.agentforge/` to see what already exists:
+
+```bash
+ls .agentforge/agents .agentforge/pipelines .agentforge/nodes .agentforge/prompts .agentforge/schemas 2>/dev/null
+```
+
+Three cases:
+
+1. **Empty `.agentforge/` (greenfield).** Create everything. No
+   confirmation needed.
+
+2. **Existing `.agentforge/` and the user said "update", "edit", "modify",
+   "extend", "rewrite", or named a specific file to change.** You may
+   edit, but **before each edit**, ask explicit confirmation. Use
+   `AskUserQuestion` (Claude Code) or the host agent's interactive-prompt
+   tool when available. Otherwise, state the proposed change in chat and
+   wait for a yes/no:
+
+   > *"`agents/analyst.agent.yaml` already exists with executor `pi-ai`
+   > and budget $0.10 / 40k tokens. You asked to swap the model to
+   > `claude-haiku-4-5`. Apply this edit? (y/n)"*
+
+   One question per file. Batch only when the changes are mechanically
+   identical (e.g. version bump across three agent files).
+
+3. **Existing `.agentforge/` and the user has NOT signalled an edit
+   intent.** Default to **adding new files alongside** the existing ones:
+   - New agent → `agents/<new-name>.agent.yaml`
+   - New pipeline → `pipelines/<new-name>.pipeline.yaml`
+   - New schema → `schemas/<new-type>.schema.yaml`
+
+   Pick a name that doesn't collide. If a name collision is unavoidable
+   (e.g. user asked for "another analyst" and `analyst.agent.yaml`
+   already exists), confirm before reusing the name — propose
+   `analyst-v2.agent.yaml` or `analyst-<domain>.agent.yaml` first and
+   ask which they prefer.
+
+**Never silently overwrite.** A file that exists is the user's prior
+work; treat it as authoritative until they say otherwise.
+
+When unsure whether the user is asking for "extend" vs "edit", ask. The
+cost of one clarifying question is much lower than the cost of clobbering
+their pipeline.
 
 ## Hard rules
 
@@ -185,6 +238,9 @@ Write the full directory per `references/scaffold.md`. After writing:
   prototype stage. Use `prompts/<agent>.system.md`.
 - **Never modify shipped templates in place.** Copy them into the user's
   `.agentforge/` directory first, then edit.
+- **Default to creating new files. Confirm before editing existing ones.**
+  See *Modification policy* above. Use `AskUserQuestion` or the host
+  agent's interactive-prompt tool. Never silently overwrite.
 
 ## What success looks like
 
