@@ -19,3 +19,9 @@ coverage/
 .grepai/
 
 graphify-out/
+
+# AI coding agent local state (per-developer, not for git)
+.claude/
+.agents/
+CLAUDE.md
+skills-lock.json
