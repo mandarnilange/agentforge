@@ -17,6 +17,12 @@ The Vercel skills CLI scans the repo's `skills/` directory and installs every sk
 npx skills add https://github.com/mandarnilange/agentforge/tree/main/skills/agentforge-workflow
 ```
 
+## New here? Use the quickstart
+
+The [Skill Quickstart](../docs/skill-quickstart.md) is a 5-minute,
+fill-in-the-blanks markdown you edit, paste into your AI agent, and run.
+It's the recommended path for anyone trying the skills for the first time.
+
 ## Available skills
 
 | Skill | Audience | What it does |

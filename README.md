@@ -234,7 +234,9 @@ npx skills add mandarnilange/agentforge
 | `agentforge-template-author` | Contributor | Guides adding a new shipped template under `packages/{core,platform}/src/templates/`. |
 | `agentforge-debug` | Operator | Triages stuck or failing pipeline runs from symptom to fix path. |
 
-Trigger phrases live in each skill's frontmatter — e.g. *"help me design an AgentForge pipeline for PR triage"* fires `agentforge-workflow`; *"why is pipeline X stuck?"* fires `agentforge-debug`. Catalog, changelog, and authoring docs: [`skills/`](skills/).
+Trigger phrases live in each skill's frontmatter — e.g. *"help me design an AgentForge pipeline for PR triage"* fires `agentforge-workflow`; *"why is pipeline X stuck?"* fires `agentforge-debug`.
+
+**New here?** The [Skill Quickstart](docs/skill-quickstart.md) is a 5-minute, fill-in-the-blanks markdown you edit, paste into your AI agent, and run. Catalog, changelog, and authoring docs: [`skills/`](skills/).
 
 ---
 
@@ -280,6 +282,7 @@ agentforge node start --control-plane-url <url>   # Run as a worker (platform)
 Every deep-dive lives in [`docs/`](docs/). Pick a track:
 
 **Get started**
+- **[Skill Quickstart](docs/skill-quickstart.md)** — 5-minute, fill-in-the-blanks path from zero to your first run via the `agentforge-workflow` skill.
 - **[Getting Started](docs/getting-started.md)** — install to first pipeline run, full CLI walkthrough, resume flow.
 - **[Who Uses It](docs/who-uses-it.md)** — what platform engineers, software engineers, and domain owners each get out of AgentForge.
 - **[Templates](docs/templates.md)** — catalog of bundled pipeline templates.
