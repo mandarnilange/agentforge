@@ -2070,7 +2070,61 @@ interface AgentJobIdentity {
 
 ---
 
-## 15. Glossary
+## 15. Deploying heterogeneous worker pools
+
+The execution plane scales horizontally by adding worker hosts. Workers register with the control plane, heartbeat, and receive dispatched agent jobs. Two workers with **different capabilities** on different hosts let the scheduler route each agent to the right node via `nodeAffinity`.
+
+### Spinning up two specialised workers
+
+```bash
+# Worker A — beefy, Docker-isolated, GPU
+NODE_NAME=worker-gpu \
+NODE_CAPABILITIES=llm-access,docker,high-memory,gpu \
+NODE_MAX_CONCURRENT_RUNS=4 \
+CONTROL_PLANE_URL=http://cp:3001 \
+  docker compose -f packages/platform/docker-compose.worker.yml up -d
+
+# Worker B — lightweight, llm-calls only
+NODE_NAME=worker-light \
+NODE_CAPABILITIES=llm-access \
+NODE_MAX_CONCURRENT_RUNS=10 \
+CONTROL_PLANE_URL=http://cp:3001 \
+  docker compose -f packages/platform/docker-compose.worker.yml up -d
+```
+
+### Matching agent affinity
+
+The `developer` agent demands Docker isolation and benefits from GPU, so it routes to `worker-gpu`. The `analyst` agent only needs LLM access, so it lands on `worker-light`:
+
+```yaml
+# .agentforge/agents/developer.agent.yaml
+spec:
+  nodeAffinity:
+    required:  [{ capability: llm-access }, { capability: docker }]
+    preferred: [{ capability: gpu }, { capability: high-memory }]
+```
+
+```yaml
+# .agentforge/agents/analyst.agent.yaml
+spec:
+  nodeAffinity:
+    required: [{ capability: llm-access }]
+```
+
+### Verifying the pool
+
+```bash
+agentforge get nodes
+# NAME          STATUS   CAPABILITIES                                    ACTIVE/MAX
+# worker-gpu    online   llm-access, docker, high-memory, gpu            0/4
+# worker-light  online   llm-access                                      0/10
+```
+
+The scheduler picks the highest-scoring node whose capabilities satisfy each agent's required set; soft preferences break ties and active-run counts cap concurrency per node.
+
+---
+
+## 16. Glossary
 
 | Term | Definition |
 |------|-----------|

@@ -1,0 +1,34 @@
+name: Publish Skills
+
+# Validates SKILL.md frontmatter under `skills/`. The `skills/` path is
+# what Vercel's skills CLI scans by default — keeping it on the default
+# branch IS the publication step (no upload / no registry submission).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'skills/**'
+      - 'scripts/validate-skills.mjs'
+      - '.github/workflows/publish-skills.yml'
+
+concurrency:
+  group: publish-skills-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: validate skill frontmatter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Validate skill frontmatter
+        run: node scripts/validate-skills.mjs

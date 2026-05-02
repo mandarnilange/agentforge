@@ -20,6 +20,7 @@
 		"test:watch": "vitest",
 		"lint": "biome check --write .",
 		"typecheck": "tsc --build",
+		"skills:validate": "node scripts/validate-skills.mjs",
 		"clean": "rm -rf packages/core/dist packages/core/tsconfig.tsbuildinfo packages/core/src/dashboard/dist packages/platform/dist packages/platform/tsconfig.tsbuildinfo"
 	},
 	"engines": {
