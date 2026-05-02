@@ -17,13 +17,20 @@ The Vercel skills CLI scans the repo's `skills/` directory and installs every sk
 npx skills add https://github.com/mandarnilange/agentforge/tree/main/skills/agentforge-workflow
 ```
 
+## New here? Use the quickstart
+
+The [Skill Quickstart](../docs/skill-quickstart.md) is a 5-minute,
+fill-in-the-blanks markdown you edit, paste into your AI agent, and run.
+It's the recommended path for anyone trying the skills for the first time.
+
 ## Available skills
 
 | Skill | Audience | What it does |
 |---|---|---|
 | [`agentforge-workflow`](./agentforge-workflow/SKILL.md) | End user | Walks through designing an AgentForge workflow — agents, pipeline, gates, loops, parallelism, wiring, nodes — and emits a complete `.agentforge/` directory. |
-| [`agentforge-template-author`](./agentforge-template-author/SKILL.md) | Contributor | Guides adding a new shipped template under `packages/{core,platform}/src/templates/`. Scope check → package selection → manifest → tests → PR checklist. |
+| [`agentforge-cli`](./agentforge-cli/SKILL.md) | Operator | Conversational interface to the AgentForge CLI. *"Run my pipeline"*, *"approve gate X"*, *"show me logs"* → maps to commands, confirms cost / state changes, summarises output. |
 | [`agentforge-debug`](./agentforge-debug/SKILL.md) | Operator | Triages a stuck or failing pipeline run from symptom → state inspection → root-cause classification → fix path. |
+| [`agentforge-template-author`](./agentforge-template-author/SKILL.md) | Contributor | Guides adding a new shipped template under `packages/{core,platform}/src/templates/`. Scope check → package selection → manifest → tests → PR checklist. |
 
 Versions, release notes, and the bump policy live in [`CHANGELOG.md`](./CHANGELOG.md).
 

@@ -41,6 +41,15 @@ next install.
 
 - _add entries here as they merge_
 
+### 2026-05-02 (cli skill + ops surface)
+
+- **`agentforge-cli` 0.1.0** — initial release. Conversational interface
+  to the AgentForge CLI: maps natural-language asks ("run my pipeline",
+  "approve gate X", "show me logs") to commands, executes via the host
+  agent's shell, summarises output. Confirms before any cost-incurring
+  or state-mutating command. See
+  [`agentforge-cli/CHANGELOG.md`](agentforge-cli/CHANGELOG.md).
+
 ### 2026-05-02 (modification policy sweep)
 
 - **`agentforge-workflow` 0.2.0** — added a Modification policy:
