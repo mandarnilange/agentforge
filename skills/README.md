@@ -8,13 +8,13 @@ Agent skills for AgentForge, published via the
 Install all skills from this repo into your agent runtime:
 
 ```bash
-npx skills add mandarnilange/agentforce_public
+npx skills add mandarnilange/agentforge
 ```
 
 Or install a single skill by path:
 
 ```bash
-npx skills add mandarnilange/agentforce_public/agentforge-workflow
+npx skills add mandarnilange/agentforge/agentforge-workflow
 ```
 
 ## Available skills

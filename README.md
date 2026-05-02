@@ -225,7 +225,7 @@ When `ANTHROPIC_API_KEY` isn't set, the dashboard renders a read-only banner —
 Designing an AgentForge workflow from scratch is a lot of YAML. The repo ships an [agent skill](https://skills.sh) that walks any Claude Code / Cursor / Codex session through the design — agents, phases, gates, loops, parallelism, wiring, nodes — and emits a working `.agentforge/` directory.
 
 ```bash
-npx skills add mandarnilange/agentforce_public/agentforge-workflow
+npx skills add mandarnilange/agentforge/agentforge-workflow
 ```
 
 Then ask the agent something like *"help me design an AgentForge pipeline for PR triage"* and the skill kicks in. Catalog and authoring docs: [`skills/`](skills/).
