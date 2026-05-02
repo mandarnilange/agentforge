@@ -11,10 +11,10 @@ Install all skills from this repo into your agent runtime:
 npx skills add mandarnilange/agentforge
 ```
 
-Or install a single skill by path:
+The Vercel skills CLI scans the repo's `skills/` directory and installs every skill it finds. Want a single skill instead? Use the full GitHub tree URL:
 
 ```bash
-npx skills add mandarnilange/agentforge/agentforge-workflow
+npx skills add https://github.com/mandarnilange/agentforge/tree/main/skills/agentforge-workflow
 ```
 
 ## Available skills
