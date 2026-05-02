@@ -11,17 +11,21 @@ Install all skills from this repo into your agent runtime:
 npx skills add mandarnilange/agentforge
 ```
 
-Or install a single skill by path:
+The Vercel skills CLI scans the repo's `skills/` directory and installs every skill it finds. Want a single skill instead? Use the full GitHub tree URL:
 
 ```bash
-npx skills add mandarnilange/agentforge/agentforge-workflow
+npx skills add https://github.com/mandarnilange/agentforge/tree/main/skills/agentforge-workflow
 ```
 
 ## Available skills
 
-| Skill | What it does |
-|---|---|
-| [`agentforge-workflow`](./agentforge-workflow/SKILL.md) | Walks a user through designing an AgentForge workflow — agents, pipeline, gates, loops, parallelism, wiring, nodes — and emits a complete `.agentforge/` directory. |
+| Skill | Audience | What it does |
+|---|---|---|
+| [`agentforge-workflow`](./agentforge-workflow/SKILL.md) | End user | Walks through designing an AgentForge workflow — agents, pipeline, gates, loops, parallelism, wiring, nodes — and emits a complete `.agentforge/` directory. |
+| [`agentforge-template-author`](./agentforge-template-author/SKILL.md) | Contributor | Guides adding a new shipped template under `packages/{core,platform}/src/templates/`. Scope check → package selection → manifest → tests → PR checklist. |
+| [`agentforge-debug`](./agentforge-debug/SKILL.md) | Operator | Triages a stuck or failing pipeline run from symptom → state inspection → root-cause classification → fix path. |
+
+Versions, release notes, and the bump policy live in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Layout
 

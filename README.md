@@ -222,13 +222,19 @@ When `ANTHROPIC_API_KEY` isn't set, the dashboard renders a read-only banner —
 
 ## Agent Skills
 
-Designing an AgentForge workflow from scratch is a lot of YAML. The repo ships an [agent skill](https://skills.sh) that walks any Claude Code / Cursor / Codex session through the design — agents, phases, gates, loops, parallelism, wiring, nodes — and emits a working `.agentforge/` directory.
+The repo ships [agent skills](https://skills.sh) that drop into any Claude Code / Cursor / Codex session — installable in one command:
 
 ```bash
-npx skills add mandarnilange/agentforge/agentforge-workflow
+npx skills add mandarnilange/agentforge
 ```
 
-Then ask the agent something like *"help me design an AgentForge pipeline for PR triage"* and the skill kicks in. Catalog and authoring docs: [`skills/`](skills/).
+| Skill | Audience | What it does |
+|---|---|---|
+| `agentforge-workflow` | End user | Walks through designing an AgentForge workflow and emits a complete `.agentforge/` directory. |
+| `agentforge-template-author` | Contributor | Guides adding a new shipped template under `packages/{core,platform}/src/templates/`. |
+| `agentforge-debug` | Operator | Triages stuck or failing pipeline runs from symptom to fix path. |
+
+Trigger phrases live in each skill's frontmatter — e.g. *"help me design an AgentForge pipeline for PR triage"* fires `agentforge-workflow`; *"why is pipeline X stuck?"* fires `agentforge-debug`. Catalog, changelog, and authoring docs: [`skills/`](skills/).
 
 ---
 
