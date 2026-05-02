@@ -13,7 +13,7 @@ description: >
 license: MIT
 metadata:
   author: mandarnilange
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
 # AgentForge Template Author
@@ -186,7 +186,9 @@ Required files at the top of the template directory:
 
 ### 10. Emit and stop
 
-Write the directory tree per `references/template-anatomy.md`. Show the
+Write the directory tree per `references/template-anatomy.md`. **Default
+to creating new files** — see the *Modification policy* below before
+touching any existing template, registry, or doc. After writing, show the
 contributor:
 
 1. The exact file tree you wrote.
@@ -203,6 +205,47 @@ contributor:
 Do **not** open the PR. Do **not** push. Stop here unless the contributor
 explicitly asks for the next step.
 
+## Modification policy
+
+This skill ships changes into the repo, not into a user's project — every
+edit becomes a PR that other people will live with. Be conservative.
+
+**Default behaviour: create a new template directory. Never touch an
+existing shipped template, registry file, doc, or test unless the user
+explicitly says "update", "edit", "modify", or names the file.**
+
+Three cases:
+
+1. **New template (greenfield).** Create a brand-new directory under
+   `packages/{core,platform}/src/templates/<new-name>/` and a brand-new
+   test file. The registry auto-discovers — no registry edit needed.
+   `docs/templates.md` is the only existing file you need to *append* to;
+   confirm the addition before writing.
+
+2. **The user explicitly asks to edit an existing template** (e.g.
+   *"update `simple-sdlc` to add a security agent"*). Before each file
+   edit, ask explicit confirmation. Use `AskUserQuestion` (Claude Code)
+   or the host agent's interactive-prompt tool when available. Otherwise,
+   state the proposed change in chat and wait for a yes/no:
+
+   > *"`packages/core/src/templates/simple-sdlc/pipelines/simple-sdlc.pipeline.yaml`
+   > currently has 3 phases. Adding a `security` phase between
+   > `architecture` and `implementation` requires renumbering. Apply
+   > this edit? (y/n)"*
+
+   One question per file. Modifying a shipped template can break end
+   users on `agentforge init --template <name>`; warn the contributor
+   that this is a **major** version bump and a breaking change.
+
+3. **The user has NOT signalled an edit intent** but the work overlaps
+   with an existing template. Default to forking: create a new template
+   directory (e.g. `simple-sdlc-secure/`) instead of modifying the
+   existing one. Confirm naming with the contributor.
+
+**Never silently overwrite a shipped template, the registry file, an
+existing test, or `docs/templates.md`.** Every edit to existing files in
+this repo needs an explicit go-ahead.
+
 ## Hard rules
 
 - **Do not invent registry fields.** `template.json` must match the schema in
@@ -218,6 +261,10 @@ explicitly asks for the next step.
   these.
 - **Tests required.** A template without a parse test should not merge. See
   `references/test-and-publish.md`.
+- **Default to creating a new template. Confirm before editing existing
+  ones.** See *Modification policy* above. Use `AskUserQuestion` or the
+  host agent's interactive-prompt tool. Editing a shipped template is a
+  breaking change — warn the contributor.
 
 ## What success looks like
 
