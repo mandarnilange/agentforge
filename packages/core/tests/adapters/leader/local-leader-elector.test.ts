@@ -35,4 +35,20 @@ describe("LocalLeaderElector", () => {
 		expect(e.isLeader("a")).toBe(true);
 		expect(e.isLeader("b")).toBe(false);
 	});
+
+	it("acquire returns false on a second call to the same name (mutual exclusion)", async () => {
+		// Two parallel call sites (e.g. reconciler + scheduler that mistakenly
+		// share a lock name, or two runWhenLeader instances on the same process)
+		// must not both think they're leader.
+		const e = new LocalLeaderElector();
+		expect(await e.acquire("foo")).toBe(true);
+		expect(await e.acquire("foo")).toBe(false);
+	});
+
+	it("acquire succeeds again after release", async () => {
+		const e = new LocalLeaderElector();
+		await e.acquire("foo");
+		await e.release("foo");
+		expect(await e.acquire("foo")).toBe(true);
+	});
 });

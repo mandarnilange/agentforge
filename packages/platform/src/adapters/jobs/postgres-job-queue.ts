@@ -56,16 +56,27 @@ export class PostgresJobQueue implements IJobQueue {
 		// edit) shouldn't poison the whole claim — drop the bad row and
 		// log so the operator can investigate.
 		const parsed: AgentJob[] = [];
+		const corrupt: string[] = [];
 		for (const r of rows) {
 			try {
 				parsed.push(JSON.parse(r.payload) as AgentJob);
 			} catch (err) {
+				corrupt.push(r.run_id);
 				console.warn(
 					`PostgresJobQueue: dropping unparseable payload for run_id=${r.run_id}: ${
 						err instanceof Error ? err.message : String(err)
 					}`,
 				);
 			}
+		}
+		if (corrupt.length > 0) {
+			// Delete the poisoned row(s) so reclaimStale doesn't keep recycling
+			// them back into the queue head — without this, a single bad row
+			// would block the FIFO until manually purged.
+			await this.pool.query(
+				"DELETE FROM agent_jobs WHERE run_id = ANY($1::text[])",
+				[corrupt],
+			);
 		}
 		return parsed;
 	}

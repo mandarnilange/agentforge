@@ -17,14 +17,20 @@ export function runWhenLeader(
 	intervalMs: number,
 ): () => void {
 	let stopped = false;
+	// Reentrancy guard: setInterval fires the callback regardless of whether
+	// the previous async invocation has resolved. Without this flag, a body
+	// that runs longer than `intervalMs` (e.g. a slow reconciler scan) would
+	// have N ticks all in flight at once, each holding leader rights.
+	let inFlight = false;
 
 	const tick = async (): Promise<void> => {
-		if (stopped) return;
+		if (stopped || inFlight) return;
 		let leader = elector.isLeader(lockName);
 		if (!leader) {
 			leader = await elector.acquire(lockName);
 		}
 		if (!leader) return;
+		inFlight = true;
 		try {
 			await body();
 		} catch (err) {
@@ -35,11 +41,23 @@ export function runWhenLeader(
 					err instanceof Error ? err.message : String(err)
 				}`,
 			);
+		} finally {
+			inFlight = false;
 		}
 	};
 
 	const handle = setInterval(() => {
-		void tick();
+		// `tick` is async; attach .catch to absorb any rejection from the
+		// outer pre-body code (acquire/isLeader). Body errors are already
+		// caught inside tick — this is just a belt-and-braces guard against
+		// unhandled rejections at the timer boundary.
+		tick().catch((err) => {
+			console.error(
+				`runWhenLeader: pre-body error for lock "${lockName}": ${
+					err instanceof Error ? err.message : String(err)
+				}`,
+			);
+		});
 	}, intervalMs);
 
 	return () => {

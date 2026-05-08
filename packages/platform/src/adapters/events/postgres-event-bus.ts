@@ -28,7 +28,8 @@ const NOTIFY_PAYLOAD_LIMIT = 7900;
 const IDENTIFIER_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 export class PostgresEventBus implements IEventBus {
-	private readonly client: pg.Client;
+	private readonly connectionString: string;
+	private client: pg.Client;
 	/**
 	 * Separate pool for outgoing pg_notify calls. The pg docs recommend
 	 * the LISTEN client stay idle — issuing other queries on the same
@@ -48,14 +49,14 @@ export class PostgresEventBus implements IEventBus {
 				`Invalid channel name "${channel}" — must match ${IDENTIFIER_RE} (LISTEN/UNLISTEN take identifiers, not parameters).`,
 			);
 		}
-		this.client = new pg.Client({ connectionString });
+		this.connectionString = connectionString;
+		this.client = this.makeClient();
 		this.notifyPool = new pg.Pool({ connectionString, max: 2 });
 	}
 
-	async start(): Promise<void> {
-		if (this.started) return;
-		await this.client.connect();
-		this.client.on("notification", (msg) => {
+	private makeClient(): pg.Client {
+		const c = new pg.Client({ connectionString: this.connectionString });
+		c.on("notification", (msg) => {
 			if (!msg.payload) return;
 			let event: PipelineEvent;
 			try {
@@ -65,8 +66,28 @@ export class PostgresEventBus implements IEventBus {
 			}
 			this.deliver(event);
 		});
-		// Channel is constructor-validated; safe to interpolate.
-		await this.client.query(`LISTEN ${this.channel}`);
+		return c;
+	}
+
+	async start(): Promise<void> {
+		if (this.started) return;
+		await this.client.connect();
+		try {
+			// Channel is constructor-validated; safe to interpolate.
+			await this.client.query(`LISTEN ${this.channel}`);
+		} catch (err) {
+			// LISTEN failed but connect succeeded → calling start() again on
+			// the same client would throw "Client is already connected" and
+			// also leak the previous notification listener. Tear down and
+			// rebuild so the caller can retry cleanly.
+			try {
+				await this.client.end();
+			} catch {
+				// already broken; nothing to recover
+			}
+			this.client = this.makeClient();
+			throw err;
+		}
 		this.started = true;
 	}
 
@@ -108,12 +129,18 @@ export class PostgresEventBus implements IEventBus {
 	}
 
 	async close(): Promise<void> {
-		try {
-			await this.client.query(`UNLISTEN ${this.channel}`);
-		} catch {
-			// Connection may already be closed.
-		}
-		await this.client.end();
-		await this.notifyPool.end();
+		// allSettled so a failure tearing down the listener client does not
+		// leak the notify pool's connections (or vice versa).
+		await Promise.allSettled([
+			(async () => {
+				try {
+					await this.client.query(`UNLISTEN ${this.channel}`);
+				} catch {
+					// Connection may already be closed.
+				}
+				await this.client.end();
+			})(),
+			this.notifyPool.end(),
+		]);
 	}
 }

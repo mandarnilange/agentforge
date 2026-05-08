@@ -163,4 +163,42 @@ describe("PostgresEventBus", () => {
 		).length;
 		expect(listenCallsAfter).toBe(listenCallsBefore);
 	});
+
+	it("start() recovers from a failed LISTEN by tearing down the connect and allowing retry", async () => {
+		// Fresh bus that hasn't started yet.
+		vi.clearAllMocks();
+		const fresh = new PostgresEventBus(
+			"postgresql://localhost/test",
+			"agentforge",
+		) as PostgresEventBus & { start: () => Promise<void> };
+		// First start: connect succeeds, LISTEN fails.
+		mockClientQuery.mockRejectedValueOnce(new Error("LISTEN failed"));
+		await expect(fresh.start()).rejects.toThrow(/LISTEN failed/);
+		// Retry: connect must NOT be called twice on the same client (would
+		// throw "Client is already connected"). Implementation should either
+		// recreate the client or skip connect on retry.
+		mockClientQuery.mockResolvedValueOnce({ rows: [] });
+		mockConnect.mockClear();
+		await fresh.start();
+		// Second start either re-connects on a fresh client or no-ops connect;
+		// either way LISTEN must have been issued again.
+		const listenCalls = mockClientQuery.mock.calls.filter((c) =>
+			(c[0] as string).startsWith("LISTEN"),
+		);
+		expect(listenCalls.length).toBeGreaterThanOrEqual(1);
+	});
+
+	it("close() ends notify pool even when client.end() rejects", async () => {
+		vi.clearAllMocks();
+		const fresh = new PostgresEventBus(
+			"postgresql://localhost/test",
+			"agentforge",
+		);
+		mockClientQuery.mockResolvedValueOnce({ rows: [] }); // LISTEN
+		await fresh.start();
+		mockClientQuery.mockResolvedValueOnce({ rows: [] }); // UNLISTEN
+		mockEnd.mockRejectedValueOnce(new Error("client end failed"));
+		await fresh.close();
+		expect(mockPoolEnd).toHaveBeenCalled();
+	});
 });

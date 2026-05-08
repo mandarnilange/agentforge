@@ -44,13 +44,19 @@ export class PostgresLeaderElector implements ILeaderElector {
 			);
 			const acquired = rows[0]?.pg_try_advisory_lock === true;
 			if (!acquired) {
+				// Lock held elsewhere — we never opened a session-scoped lock,
+				// so a plain release is safe.
 				client.release();
 				return false;
 			}
 			this.held.set(lockName, { client });
 			return true;
 		} catch (err) {
-			client.release();
+			// Query threw — connection is in an unknown state. Destroying it
+			// (release(true)) prevents pg from putting a possibly-locked
+			// session back into circulation, where the next caller would
+			// inherit either a held lock or a poisoned client.
+			client.release(true);
 			throw err;
 		}
 	}
@@ -59,14 +65,23 @@ export class PostgresLeaderElector implements ILeaderElector {
 		const handle = this.held.get(lockName);
 		if (!handle) return;
 		const lockId = lockNameToBigInt(lockName);
+		// Always drop the in-memory handle so isLeader() flips false, even
+		// when the unlock RPC fails — at that point the only safe thing is
+		// to destroy the connection (forcing pg to close the session, which
+		// auto-releases any advisory locks).
+		this.held.delete(lockName);
 		try {
 			await handle.client.query(
 				"SELECT pg_advisory_unlock($1) AS pg_advisory_unlock",
 				[lockId],
 			);
-		} finally {
 			handle.client.release();
-			this.held.delete(lockName);
+		} catch (err) {
+			// Unlock failed — the session may still hold the lock. Forcing
+			// destruction closes the connection, which Postgres treats as a
+			// session end and releases all advisory locks held by it.
+			handle.client.release(true);
+			throw err;
 		}
 	}
 

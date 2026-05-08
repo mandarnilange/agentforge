@@ -82,6 +82,14 @@ function defaultProbe(opts: DockerAvailabilityOptions): () => Promise<boolean> {
 					})
 				: connect({ path: socketPath, timeout: timeoutMs });
 
+			// Persistent no-op error sink. After cleanup() destroys the
+			// socket, the OS may emit a *second* "error" (e.g. the TCP
+			// RST + ETIMEDOUT race CR flagged). The once("error", ...)
+			// handler below has already consumed the first; without this
+			// permanent listener the second event would surface as an
+			// unhandled error and crash the process at startup.
+			socket.on("error", () => {});
+
 			const cleanup = (ok: boolean) => {
 				socket.destroy();
 				resolve(ok);

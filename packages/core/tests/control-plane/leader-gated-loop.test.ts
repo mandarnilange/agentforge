@@ -95,4 +95,24 @@ describe("runWhenLeader", () => {
 		stop();
 		errSpy.mockRestore();
 	});
+
+	it("does not start a second tick while the previous one is still running", async () => {
+		// Body takes 5 intervals to resolve. Ticks must not overlap, so over
+		// 4 intervals we should only ever see 1 invocation in flight.
+		const elector = new LocalLeaderElector();
+		let running = 0;
+		let maxConcurrent = 0;
+		const body = vi.fn(async () => {
+			running++;
+			maxConcurrent = Math.max(maxConcurrent, running);
+			await new Promise((r) => setTimeout(r, 5_000));
+			running--;
+		});
+		const stop = runWhenLeader(elector, "lock-a", body, 1_000);
+		await vi.advanceTimersByTimeAsync(4_000);
+		expect(maxConcurrent).toBe(1);
+		stop();
+		// drain in-flight body
+		await vi.runAllTimersAsync();
+	});
 });

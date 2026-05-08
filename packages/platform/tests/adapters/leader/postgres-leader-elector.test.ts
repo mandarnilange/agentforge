@@ -73,6 +73,27 @@ describe("PostgresLeaderElector", () => {
 		expect(lastSql).toMatch(/pg_advisory_unlock/i);
 	});
 
+	it("destroys the connection (release(true)) when acquire query throws", async () => {
+		mockClientQuery.mockRejectedValueOnce(new Error("connection refused"));
+		await expect(elector.acquire("name-a")).rejects.toThrow();
+		// Connection in unknown state must be evicted from the pool — passing
+		// no arg risks returning a session-scoped lock holder back into circulation.
+		expect(mockRelease).toHaveBeenCalledWith(true);
+	});
+
+	it("destroys the connection (release(true)) when pg_advisory_unlock throws", async () => {
+		mockClientQuery.mockResolvedValueOnce({
+			rows: [{ pg_try_advisory_lock: true }],
+		});
+		await elector.acquire("name-a");
+		mockClientQuery.mockRejectedValueOnce(new Error("server crashed"));
+		// Even if the unlock RPC failed, we must not return the still-locked
+		// session back to the pool — split-brain risk.
+		await expect(elector.release("name-a")).rejects.toThrow();
+		expect(mockRelease).toHaveBeenCalledWith(true);
+		expect(elector.isLeader("name-a")).toBe(false);
+	});
+
 	it("hashes lock names to a stable bigint to avoid collisions", async () => {
 		// Two distinct names produce two distinct lock ids; reusing the same
 		// name produces the same id (release + re-acquire round-trip).

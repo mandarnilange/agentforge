@@ -83,8 +83,28 @@ describe("PostgresJobQueue", () => {
 					{ run_id: "bad", payload: "{ not valid json" },
 				],
 			});
+			// 2nd query: the cleanup DELETE for the poisoned row.
+			mockQuery.mockResolvedValueOnce({ rowCount: 1, rows: [] });
 			const claimed = await queue.claim("worker-a", { limit: 5 });
 			expect(claimed.map((j) => j.runId)).toEqual(["ok"]);
+		});
+
+		it("DELETEs corrupted rows so reclaimStale can't recycle them forever", async () => {
+			// Without delete: the row stays claimed_by=worker, JSON.parse keeps
+			// throwing, and reclaimStale eventually frees it for another doomed
+			// claim — head-of-line poison forever.
+			mockQuery.mockResolvedValueOnce({
+				rows: [{ run_id: "bad", payload: "not json" }],
+			});
+			mockQuery.mockResolvedValueOnce({ rowCount: 1, rows: [] });
+			await queue.claim("worker-a");
+			const deleteCall = mockQuery.mock.calls.find(
+				(c) =>
+					typeof c[0] === "string" &&
+					(c[0] as string).match(/DELETE FROM agent_jobs/i),
+			);
+			expect(deleteCall).toBeDefined();
+			expect(deleteCall?.[1]).toEqual([["bad"]]);
 		});
 
 		it("filters by node_name and pending claim", async () => {

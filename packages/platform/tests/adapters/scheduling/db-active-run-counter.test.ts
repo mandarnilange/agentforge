@@ -46,8 +46,10 @@ describe("DbActiveRunCounter", () => {
 		);
 	});
 
-	it("count() returns 0 when no rows match", async () => {
-		mockQuery.mockResolvedValueOnce({ rows: [{ count: "0" }] });
+	it("count() returns 0 when no rows match (exercises the rows[0] fallback)", async () => {
+		// Empty result set is the actual no-row case; the previous
+		// [{count: "0"}] mock skipped the fallback path entirely.
+		mockQuery.mockResolvedValueOnce({ rows: [] });
 		expect(await counter.count("worker-a")).toBe(0);
 	});
 
