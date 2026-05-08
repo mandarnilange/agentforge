@@ -52,7 +52,22 @@ export class PostgresJobQueue implements IJobQueue {
        RETURNING run_id, payload`,
 			[nodeName, limit, ttlMs],
 		);
-		return rows.map((r) => JSON.parse(r.payload) as AgentJob);
+		// Resilient parse: a single corrupted payload (DB drift, manual
+		// edit) shouldn't poison the whole claim — drop the bad row and
+		// log so the operator can investigate.
+		const parsed: AgentJob[] = [];
+		for (const r of rows) {
+			try {
+				parsed.push(JSON.parse(r.payload) as AgentJob);
+			} catch (err) {
+				console.warn(
+					`PostgresJobQueue: dropping unparseable payload for run_id=${r.run_id}: ${
+						err instanceof Error ? err.message : String(err)
+					}`,
+				);
+			}
+		}
+		return parsed;
 	}
 
 	async complete(runId: string): Promise<void> {
@@ -60,13 +75,16 @@ export class PostgresJobQueue implements IJobQueue {
 	}
 
 	async reclaimStale(maxAgeMs: number): Promise<number> {
+		// COALESCE so each row uses its own claim_ttl_ms when set, falling
+		// back to maxAgeMs only when the row predates per-job TTL tracking.
 		const { rowCount } = await this.pool.query(
 			`UPDATE agent_jobs SET
          claimed_by = NULL,
          claimed_at = NULL,
          claim_ttl_ms = NULL
        WHERE claimed_at IS NOT NULL
-         AND (EXTRACT(EPOCH FROM (now() - claimed_at)) * 1000) >= $1`,
+         AND (EXTRACT(EPOCH FROM (now() - claimed_at)) * 1000)
+             >= COALESCE(claim_ttl_ms, $1)`,
 			[maxAgeMs],
 		);
 		return rowCount ?? 0;

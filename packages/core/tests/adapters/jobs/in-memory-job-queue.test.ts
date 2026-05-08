@@ -35,6 +35,17 @@ describe("InMemoryJobQueue", () => {
 		expect(claimed.map((j) => j.runId)).toEqual(["r1"]);
 	});
 
+	it("enqueue with a duplicate runId is a no-op (matches Postgres ON CONFLICT DO NOTHING)", async () => {
+		const q = new InMemoryJobQueue();
+		await q.enqueue(job("r1"), "worker-a");
+		await q.claim("worker-a"); // r1 is now claimed
+		await q.enqueue(job("r1"), "worker-b"); // duplicate runId — must not reset
+		const second = await q.claim("worker-a");
+		expect(second).toEqual([]); // still claimed, not overwritten
+		const onB = await q.claim("worker-b");
+		expect(onB).toEqual([]); // never moved to worker-b
+	});
+
 	it("does not return the same job twice (claim is exclusive)", async () => {
 		const q = new InMemoryJobQueue();
 		await q.enqueue(job("r1"), "worker-a");
@@ -84,6 +95,21 @@ describe("InMemoryJobQueue", () => {
 		expect(reclaimed).toBe(1);
 		const reclaimedJobs = await q.claim("worker-a");
 		expect(reclaimedJobs.map((j) => j.runId)).toEqual(["r1"]);
+	});
+
+	it("reclaimStale honours per-job ttlMs over the maxAgeMs argument", async () => {
+		// Job A claimed with a tight 100ms TTL; Job B with the default 300_000ms.
+		// At t+200ms (with maxAgeMs=50ms) only A's per-job TTL has elapsed.
+		const q = new InMemoryJobQueue({ now: () => 0 });
+		await q.enqueue(job("ra"), "worker-a");
+		await q.enqueue(job("rb"), "worker-a");
+		await q.claim("worker-a", { ttlMs: 100, limit: 1 });
+		await q.claim("worker-a", { ttlMs: 300_000, limit: 1 });
+		(q as unknown as { _setNow: (n: number) => void })._setNow(200);
+		const reclaimed = await q.reclaimStale(50);
+		expect(reclaimed).toBe(1);
+		const next = await q.claim("worker-a");
+		expect(next.map((j) => j.runId)).toEqual(["ra"]);
 	});
 
 	it("depth reports both pending and claimed jobs", async () => {

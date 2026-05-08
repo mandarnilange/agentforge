@@ -458,9 +458,10 @@ const nodeHealthChecker = new NodeHealthChecker(
 );
 // SSH preflight (P40-T6): warn early on unreachable ssh hosts so operators
 // don't discover the failure via a cryptic dispatch error minutes later.
-// The general health checker still runs below — preflight just gives a
-// loud, immediate signal at startup for the ssh-specific configuration class.
-void validateSshNodesAtStartup({
+// Awaited before checkAll() so the general health-check loop doesn't race
+// with preflight and re-mark a node "online" between the preflight
+// rejection and the registry write.
+await validateSshNodesAtStartup({
 	runtimes: nodeRuntimes,
 	warn: (msg) => console.warn(msg),
 	markOffline: (name) => nodeRegistry.markOffline(name),
@@ -566,6 +567,13 @@ registerNodeStartCommand(program);
 
 void program.parseAsync().then(async () => {
 	if (pgRefreshInterval) clearInterval(pgRefreshInterval);
+	if (eventBus instanceof PostgresEventBus) {
+		try {
+			await eventBus.close();
+		} catch {
+			// Best-effort: connection may already be torn down by the OS.
+		}
+	}
 	await stateStore.close();
 	if (sqliteDefinitionStore) sqliteDefinitionStore.close();
 	if (pgDefinitionStore) await pgDefinitionStore.close();

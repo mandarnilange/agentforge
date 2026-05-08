@@ -76,6 +76,17 @@ describe("PostgresJobQueue", () => {
 			expect(claimed.map((j) => j.runId)).toEqual(["r1", "r2"]);
 		});
 
+		it("skips rows with corrupted payloads instead of failing the whole claim", async () => {
+			mockQuery.mockResolvedValueOnce({
+				rows: [
+					{ run_id: "ok", payload: JSON.stringify(job("ok")) },
+					{ run_id: "bad", payload: "{ not valid json" },
+				],
+			});
+			const claimed = await queue.claim("worker-a", { limit: 5 });
+			expect(claimed.map((j) => j.runId)).toEqual(["ok"]);
+		});
+
 		it("filters by node_name and pending claim", async () => {
 			mockQuery.mockResolvedValueOnce({ rows: [] });
 			await queue.claim("worker-a", { limit: 3 });
@@ -105,6 +116,15 @@ describe("PostgresJobQueue", () => {
 			expect(sql).toMatch(/UPDATE agent_jobs/);
 			expect(sql).toMatch(/claimed_by\s*=\s*NULL/i);
 			expect(sql).toMatch(/claimed_at\s*=\s*NULL/i);
+		});
+
+		it("uses per-job claim_ttl_ms when set, falling back to maxAgeMs", async () => {
+			mockQuery.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+			await queue.reclaimStale(60_000);
+			const sql = mockQuery.mock.calls[0][0] as string;
+			// SQL should COALESCE per-job ttl with the parameter so each row
+			// is checked against its own deadline.
+			expect(sql).toMatch(/COALESCE\(claim_ttl_ms/i);
 		});
 	});
 

@@ -9,6 +9,12 @@
  * Lock names are hashed into a bigint so callers can use human-readable
  * names ("agentforge-reconciler", "agentforge-scheduler") without picking
  * magic numbers.
+ *
+ * Pool sizing: each held lock checks out one pg.PoolClient for its session
+ * lifetime. Size the underlying Postgres `max_connections` to accommodate
+ * (concurrent_lock_count × replica_count) plus headroom for ordinary
+ * queries. The default Postgres pool is created here with library defaults;
+ * pass a tuned pool via subclass / DI when load profile demands it.
  */
 
 import { createHash } from "node:crypto";
@@ -69,9 +75,10 @@ export class PostgresLeaderElector implements ILeaderElector {
 	}
 
 	async close(): Promise<void> {
-		for (const name of [...this.held.keys()]) {
-			await this.release(name);
-		}
+		// Release all held locks in parallel so shutdown is not gated on the
+		// slowest pg_advisory_unlock round-trip. Snapshot the key set first
+		// to avoid mutation during iteration.
+		await Promise.all([...this.held.keys()].map((name) => this.release(name)));
 		await this.pool.end();
 	}
 }
@@ -79,8 +86,10 @@ export class PostgresLeaderElector implements ILeaderElector {
 /**
  * Hash a lock name to a signed 64-bit int. Postgres advisory locks take a
  * bigint; sha256 truncated to 8 bytes is collision-resistant for the small
- * fixed set of agentforge lock names. Returns a string so the pg driver
- * passes it as a numeric parameter without precision loss.
+ * fixed set of agentforge lock names (collision probability ≈ 2^-63 per
+ * pair — negligible for the 5-10 lock names we ever expect to declare).
+ * Returns a string so the pg driver passes it as a numeric parameter
+ * without precision loss.
  */
 function lockNameToBigInt(name: string): string {
 	const digest = createHash("sha256").update(name).digest();

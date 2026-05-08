@@ -59,9 +59,20 @@ export class LocalAgentScheduler implements IAgentScheduler {
 
 		// Read every candidate's load from the counter — fresh on each call
 		// so a peer replica's recent dispatch is reflected immediately.
-		const counts = await Promise.all(
+		// allSettled (not all) so a single hung/failed counter call only
+		// disqualifies that node instead of blocking every dispatch.
+		const settled = await Promise.allSettled(
 			nodePool.map((n) => this.counter.count(n.metadata.name)),
 		);
+		const counts = settled.map((s, i) => {
+			if (s.status === "fulfilled") return s.value;
+			console.warn(
+				`Scheduler: counter.count("${nodePool[i].metadata.name}") failed — treating as full. ${
+					s.reason instanceof Error ? s.reason.message : String(s.reason)
+				}`,
+			);
+			return Number.POSITIVE_INFINITY;
+		});
 
 		const candidates = nodePool.filter((node, i) => {
 			const caps = node.spec.capabilities;
@@ -94,12 +105,27 @@ export class LocalAgentScheduler implements IAgentScheduler {
 	}
 
 	recordRunStarted(nodeName: string): void {
-		void this.counter.recordStarted(nodeName);
+		// Fire-and-forget: counter.recordStarted is a no-op for the
+		// stateless DB adapter, but a future adapter may have side effects.
+		// Surface failures so they don't disappear.
+		this.counter.recordStarted(nodeName).catch((err) => {
+			console.warn(
+				`Scheduler: counter.recordStarted("${nodeName}") failed: ${
+					err instanceof Error ? err.message : String(err)
+				}`,
+			);
+		});
 		this.registry?.recordRunStarted(nodeName);
 	}
 
 	recordRunCompleted(nodeName: string): void {
-		void this.counter.recordCompleted(nodeName);
+		this.counter.recordCompleted(nodeName).catch((err) => {
+			console.warn(
+				`Scheduler: counter.recordCompleted("${nodeName}") failed: ${
+					err instanceof Error ? err.message : String(err)
+				}`,
+			);
+		});
 		this.registry?.recordRunCompleted(nodeName);
 	}
 

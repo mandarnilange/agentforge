@@ -39,7 +39,12 @@ export class InMemoryJobQueue implements IJobQueue {
 	}
 
 	enqueue(job: AgentJob, nodeName: string): Promise<void> {
-		this.entries.set(job.runId, { job, nodeName });
+		// Match Postgres' `ON CONFLICT DO NOTHING`: a duplicate enqueue keeps
+		// the original entry (and any in-flight claim metadata) instead of
+		// silently overwriting it.
+		if (!this.entries.has(job.runId)) {
+			this.entries.set(job.runId, { job, nodeName });
+		}
 		return Promise.resolve();
 	}
 
@@ -74,8 +79,13 @@ export class InMemoryJobQueue implements IJobQueue {
 			if (entry.claimedBy === undefined || entry.claimedAt === undefined) {
 				continue;
 			}
+			// Per-job TTL wins when set — claim() records the worker's
+			// declared trust horizon, and that's the right age for *this*
+			// job. The maxAgeMs argument is the global fallback for jobs
+			// claimed before per-job TTLs were tracked.
 			const age = now - entry.claimedAt;
-			if (age >= maxAgeMs) {
+			const threshold = entry.ttlMs ?? maxAgeMs;
+			if (age >= threshold) {
 				entry.claimedBy = undefined;
 				entry.claimedAt = undefined;
 				entry.ttlMs = undefined;

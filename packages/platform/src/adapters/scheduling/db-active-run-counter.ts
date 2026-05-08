@@ -20,12 +20,15 @@ export class DbActiveRunCounter implements IActiveRunCounter {
 	}
 
 	async count(nodeName: string): Promise<number> {
+		// Build the IN clause from ACTIVE_STATUSES so the constant can't drift
+		// out of sync with the SQL. status = ANY($2::text[]) is equivalent to
+		// IN (...) but takes the array as a single bound parameter.
 		const { rows } = await this.pool.query(
 			`SELECT count(*)::int AS count
        FROM agent_runs
        WHERE node_name = $1
-         AND status IN ('pending','scheduled','running')`,
-			[nodeName],
+         AND status = ANY($2::text[])`,
+			[nodeName, [...ACTIVE_STATUSES]],
 		);
 		return Number(rows[0]?.count ?? 0);
 	}

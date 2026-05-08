@@ -65,13 +65,19 @@ function defaultProbe(opts: DockerAvailabilityOptions): () => Promise<boolean> {
 	const dockerHost = opts.dockerHost ?? process.env.DOCKER_HOST;
 	const socketPath = opts.socketPath ?? DEFAULT_SOCKET;
 
+	// URL parser handles IPv6 brackets, ignores path segments, and
+	// normalizes ports. Falls back to the unix socket for any non-tcp
+	// scheme (unix://, ssh://, npipe://) — those need their own runtimes
+	// which dockerode handles, but for a *reachability* probe the unix
+	// socket is the right default on every host this code runs on.
+	const tcpTarget = parseTcpDockerHost(dockerHost);
+
 	return () =>
 		new Promise<boolean>((resolve) => {
-			const tcpMatch = dockerHost?.match(/^tcp:\/\/([^:]+):(\d+)/);
-			const socket = tcpMatch
+			const socket = tcpTarget
 				? connect({
-						host: tcpMatch[1],
-						port: Number(tcpMatch[2]),
+						host: tcpTarget.host,
+						port: tcpTarget.port,
 						timeout: timeoutMs,
 					})
 				: connect({ path: socketPath, timeout: timeoutMs });
@@ -84,4 +90,19 @@ function defaultProbe(opts: DockerAvailabilityOptions): () => Promise<boolean> {
 			socket.once("error", () => cleanup(false));
 			socket.once("timeout", () => cleanup(false));
 		});
+}
+
+function parseTcpDockerHost(
+	dockerHost: string | undefined,
+): { host: string; port: number } | null {
+	if (!dockerHost?.startsWith("tcp://")) return null;
+	try {
+		const url = new URL(dockerHost);
+		const port = Number(url.port);
+		if (!Number.isFinite(port) || port <= 0) return null;
+		// url.hostname strips IPv6 brackets, which is what `connect()` wants.
+		return { host: url.hostname, port };
+	} catch {
+		return null;
+	}
 }

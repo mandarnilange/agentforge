@@ -210,9 +210,14 @@ export function registerNodeStartCommand(program: Command): void {
 		.option("--host <host>", "HTTP server host", "0.0.0.0")
 		.action(async (opts: NodeStartOptions) => {
 			const nodeName = opts.name ?? `node-${process.pid}`;
+			// Capability matching is canonicalised to lowercase so a user
+			// passing `--capabilities Docker,GPU` still triggers the docker
+			// preflight and the scheduler's `nodeAffinity.required: [docker]`
+			// matches as expected.
 			const declaredCapabilities = (opts.capabilities ?? "llm-access")
 				.split(",")
-				.map((c) => c.trim());
+				.map((c) => c.trim().toLowerCase())
+				.filter((c) => c.length > 0);
 			// Docker preflight (P40-T5): verify the daemon is actually reachable
 			// before we register a node that claims docker capability. On failure
 			// we strip "docker" from the effective list and log a warning so the

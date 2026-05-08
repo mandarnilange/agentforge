@@ -101,4 +101,21 @@ describe("LocalAgentScheduler stateless path (P45-T6)", () => {
 		);
 		expect(counter.count).toHaveBeenCalledTimes(2);
 	});
+
+	it("treats a single failing counter call as 'capacity unknown' and skips that node", async () => {
+		const counter: IActiveRunCounter = {
+			count: vi.fn(async (name: string) => {
+				if (name === "node-a") throw new Error("DB hiccup");
+				return 0;
+			}),
+			recordStarted: vi.fn().mockResolvedValue(undefined),
+			recordCompleted: vi.fn().mockResolvedValue(undefined),
+		};
+		const scheduler = new LocalAgentScheduler(undefined, { counter });
+		const nodeA = makeNode("node-a", ["llm-access"], 2);
+		const nodeB = makeNode("node-b", ["llm-access"], 2);
+		// node-a's counter rejected; node-b is healthy and idle → must be picked.
+		const picked = await scheduler.schedule(makeAgent("a"), [nodeA, nodeB]);
+		expect(picked.metadata.name).toBe("node-b");
+	});
 });

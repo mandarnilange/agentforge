@@ -31,17 +31,19 @@ describe("DbActiveRunCounter", () => {
 		const sql = mockQuery.mock.calls[0][0] as string;
 		expect(sql).toMatch(/FROM agent_runs/);
 		expect(sql).toMatch(/node_name\s*=\s*\$1/);
-		expect(sql).toMatch(/status\s+IN/i);
+		expect(sql).toMatch(/status\s*=\s*ANY/i);
 		const params = mockQuery.mock.calls[0][1] as unknown[];
 		expect(params).toContain("worker-a");
 	});
 
-	it("count() includes both 'running' and 'scheduled' / 'pending' statuses", async () => {
+	it("count() passes ACTIVE_STATUSES as a single array parameter", async () => {
 		mockQuery.mockResolvedValueOnce({ rows: [{ count: "0" }] });
 		await counter.count("worker-a");
-		const sql = mockQuery.mock.calls[0][0] as string;
-		expect(sql).toMatch(/'running'/);
-		expect(sql).toMatch(/'scheduled'|'pending'/);
+		const params = mockQuery.mock.calls[0][1] as unknown[];
+		const arrayParam = params.find((p) => Array.isArray(p)) as string[];
+		expect(arrayParam).toEqual(
+			expect.arrayContaining(["pending", "scheduled", "running"]),
+		);
 	});
 
 	it("count() returns 0 when no rows match", async () => {

@@ -11,7 +11,11 @@ vi.mock("pg", () => {
 		connect = vi.fn().mockResolvedValue(undefined);
 		end = vi.fn().mockResolvedValue(undefined);
 	}
-	return { default: { Client: MockClient } };
+	class MockPool {
+		query = vi.fn().mockResolvedValue({ rows: [] });
+		end = vi.fn().mockResolvedValue(undefined);
+	}
+	return { default: { Client: MockClient, Pool: MockPool } };
 });
 
 import { InMemoryEventBus } from "@mandarnilange/agentforge-core/adapters/events/in-memory-event-bus.js";
@@ -48,8 +52,15 @@ describe("buildEventBus", () => {
 
 	it("falls back to InMemoryEventBus when AGENTFORGE_EVENT_BUS=postgres but no url", () => {
 		process.env.AGENTFORGE_EVENT_BUS = "postgres";
-		const bus = buildEventBus({ postgresUrl: undefined });
+		const warn = vi.fn();
+		const bus = buildEventBus({ postgresUrl: undefined, warn });
 		expect(bus).toBeInstanceOf(InMemoryEventBus);
+		// Operator must see the misconfiguration — silent fallback would
+		// hide a broken multi-replica deployment.
+		expect(warn).toHaveBeenCalledOnce();
+		expect(warn).toHaveBeenCalledWith(
+			expect.stringMatching(/AGENTFORGE_EVENT_BUS=postgres.*falling back/i),
+		);
 	});
 
 	it("rejects unknown event-bus types with a clear error", () => {

@@ -16,14 +16,21 @@ import type {
 } from "@mandarnilange/agentforge-core/domain/ports/event-bus.port.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockClientQuery, mockClientOn, mockConnect, mockEnd } = vi.hoisted(
-	() => ({
-		mockClientQuery: vi.fn().mockResolvedValue({ rows: [] }),
-		mockClientOn: vi.fn(),
-		mockConnect: vi.fn(),
-		mockEnd: vi.fn().mockResolvedValue(undefined),
-	}),
-);
+const {
+	mockClientQuery,
+	mockClientOn,
+	mockConnect,
+	mockEnd,
+	mockPoolQuery,
+	mockPoolEnd,
+} = vi.hoisted(() => ({
+	mockClientQuery: vi.fn().mockResolvedValue({ rows: [] }),
+	mockClientOn: vi.fn(),
+	mockConnect: vi.fn(),
+	mockEnd: vi.fn().mockResolvedValue(undefined),
+	mockPoolQuery: vi.fn().mockResolvedValue({ rows: [] }),
+	mockPoolEnd: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock("pg", () => {
 	class MockClient {
@@ -32,7 +39,11 @@ vi.mock("pg", () => {
 		connect = mockConnect.mockResolvedValue(undefined);
 		end = mockEnd;
 	}
-	return { default: { Client: MockClient } };
+	class MockPool {
+		query = mockPoolQuery;
+		end = mockPoolEnd;
+	}
+	return { default: { Client: MockClient, Pool: MockPool } };
 });
 
 import { PostgresEventBus } from "../../../src/adapters/events/postgres-event-bus.js";
@@ -52,19 +63,23 @@ describe("PostgresEventBus", () => {
 		expect(sql).toMatch(/agentforge/);
 	});
 
-	it("emit issues NOTIFY with a JSON payload", async () => {
+	it("emit issues NOTIFY on a separate pool (listener client stays idle)", async () => {
 		const event: PipelineEvent = {
 			type: "run_updated",
 			runId: "r1",
 			status: "succeeded",
 		};
 		bus.emit(event);
-		// emit is sync but issues query asynchronously — flush microtasks
 		await new Promise((r) => setImmediate(r));
-		const notifyCall = mockClientQuery.mock.calls.find((c) =>
+		// pg_notify must go through the notify pool, not the LISTEN client.
+		const notifyCall = mockPoolQuery.mock.calls.find((c) =>
 			(c[0] as string).startsWith("SELECT pg_notify"),
 		);
 		expect(notifyCall).toBeDefined();
+		const onListenerCall = mockClientQuery.mock.calls.find((c) =>
+			(c[0] as string).startsWith("SELECT pg_notify"),
+		);
+		expect(onListenerCall).toBeUndefined();
 		const params = notifyCall?.[1] as unknown[];
 		const payload = JSON.parse(params[1] as string);
 		expect(payload.type).toBe("run_updated");
@@ -116,5 +131,36 @@ describe("PostgresEventBus", () => {
 		)?.[1] as (msg: { payload: string }) => void;
 		handler({ payload: "{ this is not json" });
 		expect(received).toHaveLength(0);
+	});
+
+	it("rejects channel names with non-identifier characters at construct", () => {
+		// Identifier interpolation in LISTEN/UNLISTEN — guard at construct
+		// time so unsafe channel names never reach the SQL layer.
+		expect(
+			() =>
+				new (
+					PostgresEventBus as unknown as new (
+						url: string,
+						channel: string,
+					) => unknown
+				)("postgresql://localhost/test", "agent;DROP TABLE users;--"),
+		).toThrow(/channel name/i);
+	});
+
+	it("close() ends both the listener client and the notify pool", async () => {
+		await bus.close();
+		expect(mockEnd).toHaveBeenCalled();
+		expect(mockPoolEnd).toHaveBeenCalled();
+	});
+
+	it("start() is idempotent (no second LISTEN on repeat call)", async () => {
+		const listenCallsBefore = mockClientQuery.mock.calls.filter((c) =>
+			(c[0] as string).startsWith("LISTEN"),
+		).length;
+		await bus.start();
+		const listenCallsAfter = mockClientQuery.mock.calls.filter((c) =>
+			(c[0] as string).startsWith("LISTEN"),
+		).length;
+		expect(listenCallsAfter).toBe(listenCallsBefore);
 	});
 });

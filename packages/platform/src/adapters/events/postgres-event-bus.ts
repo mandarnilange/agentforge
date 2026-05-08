@@ -7,6 +7,10 @@
  * subscribers also receive the event synchronously so the emitting
  * process's UI does not wait for the round-trip through Postgres.
  *
+ * The listener client is dedicated — pg recommends keeping it idle so
+ * notifications are delivered promptly. Outgoing `pg_notify` calls go
+ * through a separate pool to avoid contending with the listener.
+ *
  * Payloads exceed Postgres' 8000-byte NOTIFY limit only for unusual
  * StatusUpdate shapes — at that point we drop the cross-replica
  * delivery rather than fail the emit.
@@ -19,19 +23,37 @@ import type {
 import pg from "pg";
 
 const NOTIFY_PAYLOAD_LIMIT = 7900;
+// Strict identifier guard. LISTEN/UNLISTEN take SQL identifiers, not
+// parameters, so callers must pre-validate the channel name.
+const IDENTIFIER_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 export class PostgresEventBus implements IEventBus {
 	private readonly client: pg.Client;
+	/**
+	 * Separate pool for outgoing pg_notify calls. The pg docs recommend
+	 * the LISTEN client stay idle — issuing other queries on the same
+	 * connection can delay or drop notifications. Pool size is small
+	 * because emit is fire-and-forget and short-lived.
+	 */
+	private readonly notifyPool: pg.Pool;
 	private readonly listeners = new Set<(event: PipelineEvent) => void>();
+	private started = false;
 
 	constructor(
 		connectionString: string,
 		private readonly channel: string = "agentforge",
 	) {
+		if (!IDENTIFIER_RE.test(channel)) {
+			throw new Error(
+				`Invalid channel name "${channel}" — must match ${IDENTIFIER_RE} (LISTEN/UNLISTEN take identifiers, not parameters).`,
+			);
+		}
 		this.client = new pg.Client({ connectionString });
+		this.notifyPool = new pg.Pool({ connectionString, max: 2 });
 	}
 
 	async start(): Promise<void> {
+		if (this.started) return;
 		await this.client.connect();
 		this.client.on("notification", (msg) => {
 			if (!msg.payload) return;
@@ -43,10 +65,9 @@ export class PostgresEventBus implements IEventBus {
 			}
 			this.deliver(event);
 		});
-		// Channel names come from config / code, not user input. Quoting them
-		// would force Postgres to treat them as case-sensitive identifiers
-		// which is not what we want here.
+		// Channel is constructor-validated; safe to interpolate.
 		await this.client.query(`LISTEN ${this.channel}`);
+		this.started = true;
 	}
 
 	emit(event: PipelineEvent): void {
@@ -55,12 +76,17 @@ export class PostgresEventBus implements IEventBus {
 		// waiting for the round-trip.
 		this.deliver(event);
 		const payload = JSON.stringify(event);
-		if (payload.length > NOTIFY_PAYLOAD_LIMIT) return;
-		void this.client
+		if (payload.length > NOTIFY_PAYLOAD_LIMIT) {
+			console.warn(
+				`PostgresEventBus: dropping cross-replica delivery — payload (${payload.length}B) exceeds NOTIFY limit (${NOTIFY_PAYLOAD_LIMIT}B). type=${event.type}`,
+			);
+			return;
+		}
+		void this.notifyPool
 			.query("SELECT pg_notify($1, $2)", [this.channel, payload])
 			.catch(() => {
-				// Best-effort: if the LISTEN connection drops, peers won't see
-				// the event. Local subscribers were already notified above.
+				// Best-effort: if the notify pool is unavailable, peers won't
+				// see the event. Local subscribers were already notified above.
 			});
 	}
 
@@ -88,5 +114,6 @@ export class PostgresEventBus implements IEventBus {
 			// Connection may already be closed.
 		}
 		await this.client.end();
+		await this.notifyPool.end();
 	}
 }

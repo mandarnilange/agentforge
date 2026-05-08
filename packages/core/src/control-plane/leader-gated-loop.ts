@@ -27,9 +27,14 @@ export function runWhenLeader(
 		if (!leader) return;
 		try {
 			await body();
-		} catch {
-			// Swallow — the interval must keep running so a transient
-			// failure doesn't permanently disable the singleton loop.
+		} catch (err) {
+			// Surface the failure but keep the interval running — a transient
+			// error must not permanently disable the singleton loop.
+			console.error(
+				`runWhenLeader: body for lock "${lockName}" threw: ${
+					err instanceof Error ? err.message : String(err)
+				}`,
+			);
 		}
 	};
 

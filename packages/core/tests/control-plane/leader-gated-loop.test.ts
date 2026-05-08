@@ -80,8 +80,9 @@ describe("runWhenLeader", () => {
 		expect(release).toHaveBeenCalledWith("lock-a");
 	});
 
-	it("swallows body errors so the loop keeps running", async () => {
+	it("swallows body errors so the loop keeps running, logging each one", async () => {
 		const elector = new LocalLeaderElector();
+		const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 		const body = vi
 			.fn()
 			.mockRejectedValueOnce(new Error("boom"))
@@ -90,6 +91,8 @@ describe("runWhenLeader", () => {
 		await vi.advanceTimersByTimeAsync(1000);
 		await vi.advanceTimersByTimeAsync(1000);
 		expect(body).toHaveBeenCalledTimes(2);
+		expect(errSpy).toHaveBeenCalledWith(expect.stringMatching(/lock-a.*boom/));
 		stop();
+		errSpy.mockRestore();
 	});
 });
