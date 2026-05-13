@@ -8,7 +8,6 @@
 import { mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { InMemoryEventBus } from "@mandarnilange/agentforge-core/adapters/events/in-memory-event-bus.js";
 import { setRuntimeDefinitionStore } from "@mandarnilange/agentforge-core/agents/definition-source.js";
 import { registerDashboardCommand } from "@mandarnilange/agentforge-core/cli/commands/dashboard.js";
 import { registerExecCommand } from "@mandarnilange/agentforge-core/cli/commands/exec.js";
@@ -36,6 +35,8 @@ import { setDiscoveredSchemas } from "@mandarnilange/agentforge-core/schemas/ind
 import { buildSchemaValidators } from "@mandarnilange/agentforge-core/schemas/schema-discovery.js";
 import { SqliteStateStore } from "@mandarnilange/agentforge-core/state/store.js";
 import { Command } from "commander";
+import { buildEventBus } from "./adapters/events/event-bus-factory.js";
+import { PostgresEventBus } from "./adapters/events/postgres-event-bus.js";
 import { PgDefinitionStore } from "./adapters/store/pg-definition-store.js";
 import { SqliteDefinitionStore } from "./adapters/store/sqlite-definition-store.js";
 import type { DefinitionPersistSink } from "./cli/commands/apply.js";
@@ -47,6 +48,7 @@ import { PipelineRateLimiter } from "./control-plane/rate-limiter.js";
 import { NodeHealthChecker } from "./nodes/health-check.js";
 import { LocalNodeRuntime } from "./nodes/local-runtime.js";
 import { NodeRegistry } from "./nodes/registry.js";
+import { validateSshNodesAtStartup } from "./nodes/ssh-preflight.js";
 import { SshNodeRuntime } from "./nodes/ssh-runtime.js";
 import { flushTelemetry, initTelemetry } from "./observability/init.js";
 import {
@@ -405,7 +407,21 @@ const pipelineController = new PipelineController(
 	agentExecutor,
 );
 
-const eventBus = new InMemoryEventBus();
+// P45-T3: pluggable event bus. AGENTFORGE_EVENT_BUS=postgres + an
+// AGENTFORGE_POSTGRES_URL switches to LISTEN/NOTIFY so multiple control-plane
+// replicas see the same SSE stream. Default stays in-memory for the
+// single-process case.
+const eventBus = buildEventBus({ postgresUrl: POSTGRES_URL });
+if (eventBus instanceof PostgresEventBus) {
+	try {
+		await eventBus.start();
+	} catch (err) {
+		console.error(
+			`Failed to start Postgres event bus: ${err instanceof Error ? err.message : String(err)}`,
+		);
+		process.exit(1);
+	}
+}
 
 // Crash recovery
 const _recoveryService = new PipelineRecoveryService(stateStore, eventBus, {
@@ -440,6 +456,16 @@ const nodeHealthChecker = new NodeHealthChecker(
 	nodeRuntimes,
 	metrics,
 );
+// SSH preflight (P40-T6): warn early on unreachable ssh hosts so operators
+// don't discover the failure via a cryptic dispatch error minutes later.
+// Awaited before checkAll() so the general health-check loop doesn't race
+// with preflight and re-mark a node "online" between the preflight
+// rejection and the registry write.
+await validateSshNodesAtStartup({
+	runtimes: nodeRuntimes,
+	warn: (msg) => console.warn(msg),
+	markOffline: (name) => nodeRegistry.markOffline(name),
+});
 void nodeHealthChecker.checkAll();
 
 // Init and templates don't need the DI container — register with platform templates merged in.
@@ -541,6 +567,13 @@ registerNodeStartCommand(program);
 
 void program.parseAsync().then(async () => {
 	if (pgRefreshInterval) clearInterval(pgRefreshInterval);
+	if (eventBus instanceof PostgresEventBus) {
+		try {
+			await eventBus.close();
+		} catch {
+			// Best-effort: connection may already be torn down by the OS.
+		}
+	}
 	await stateStore.close();
 	if (sqliteDefinitionStore) sqliteDefinitionStore.close();
 	if (pgDefinitionStore) await pgDefinitionStore.close();

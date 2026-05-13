@@ -393,7 +393,7 @@ export class PipelineController {
 			let selectedNode: (typeof nodePool)[0] | null = null;
 			if (agentDef && nodePool.length > 0) {
 				try {
-					selectedNode = this.scheduler.schedule(agentDef, nodePool);
+					selectedNode = await this.scheduler.schedule(agentDef, nodePool);
 				} catch {
 					// No node satisfies requirements — fall back to local
 				}

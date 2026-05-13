@@ -20,6 +20,10 @@ import type {
 } from "@mandarnilange/agentforge-core/domain/ports/agent-executor.port.js";
 import chalk from "chalk";
 import type { Command } from "commander";
+import {
+	checkDockerAvailability,
+	filterDockerCapability,
+} from "../../nodes/docker-availability.js";
 
 interface NodeStartOptions {
 	controlPlaneUrl: string;
@@ -206,9 +210,27 @@ export function registerNodeStartCommand(program: Command): void {
 		.option("--host <host>", "HTTP server host", "0.0.0.0")
 		.action(async (opts: NodeStartOptions) => {
 			const nodeName = opts.name ?? `node-${process.pid}`;
-			const capabilities = (opts.capabilities ?? "llm-access")
+			// Capability matching is canonicalised to lowercase so a user
+			// passing `--capabilities Docker,GPU` still triggers the docker
+			// preflight and the scheduler's `nodeAffinity.required: [docker]`
+			// matches as expected.
+			const declaredCapabilities = (opts.capabilities ?? "llm-access")
 				.split(",")
-				.map((c) => c.trim());
+				.map((c) => c.trim().toLowerCase())
+				.filter((c) => c.length > 0);
+			// Docker preflight (P40-T5): verify the daemon is actually reachable
+			// before we register a node that claims docker capability. On failure
+			// we strip "docker" from the effective list and log a warning so the
+			// scheduler does not route docker-required jobs to a node that would
+			// immediately fail at execute time.
+			const dockerOk = declaredCapabilities.includes("docker")
+				? await checkDockerAvailability()
+				: true;
+			const capabilities = filterDockerCapability(
+				declaredCapabilities,
+				dockerOk,
+				(msg) => console.warn(chalk.yellow(msg)),
+			);
 			const maxConcurrentRuns = Number.parseInt(
 				opts.maxConcurrentRuns ?? "3",
 				10,

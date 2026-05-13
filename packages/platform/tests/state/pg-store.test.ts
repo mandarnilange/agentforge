@@ -144,6 +144,21 @@ describe("PostgresStateStore", () => {
 		});
 	});
 
+	describe("preflight()", () => {
+		it("issues SELECT 1 to verify connectivity", async () => {
+			mockQuery.mockResolvedValueOnce({ rows: [{ "?column?": 1 }] });
+			await store.preflight();
+			expect(mockQuery).toHaveBeenCalledWith("SELECT 1");
+		});
+
+		it("wraps pg errors with a friendly message that hints at the env var", async () => {
+			mockQuery.mockRejectedValueOnce(new Error("ECONNREFUSED 127.0.0.1:5432"));
+			await expect(store.preflight()).rejects.toThrow(
+				/preflight failed.*AGENTFORGE_POSTGRES_URL/i,
+			);
+		});
+	});
+
 	describe("createPipelineRun()", () => {
 		it("inserts a pipeline run and returns it", async () => {
 			mockQuery.mockResolvedValueOnce({ rows: [] });
