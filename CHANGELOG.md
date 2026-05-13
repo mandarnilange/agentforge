@@ -3,6 +3,83 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0] — First stable: config validation, distributed control plane, skill family
+
+First stable release on the `@mandarnilange/*` scope. Promotes the rc.2
+package layout and adds two substantive tracks (P40 + P45) plus a
+docs-and-skills authoring surface that landed since rc.2.
+
+### Added — Configuration validation (P40)
+
+- **`ANTHROPIC_API_KEY`**: friendly startup error in core exec / run-pipeline
+  instead of a deep SDK stack; dashboard surfaces a read-only banner when
+  the key is absent.
+- **Empty `.agentforge/` warning**: core warns when no agents or pipelines
+  are discovered at startup so the failure mode is obvious.
+- **`AGENTFORGE_POSTGRES_URL`**: platform validates the URL is parseable
+  and the database is reachable before any controller starts.
+- **Docker socket**: nodes hosting Docker executors verify the socket
+  is reachable and the daemon responds before accepting work, with a
+  persistent error sink on the probe socket.
+- **SSH preflight**: SSH nodes validate key file readability and host
+  TCP/SSH-handshake reachability at startup.
+
+### Added — Distributed control plane (P45)
+
+- **Heterogeneous worker compose example**: GPU-heavy / Docker-light
+  worker profiles in `docker-compose.heterogeneous.yml` plus a worked
+  README walkthrough and `platform-architecture.md` §15.
+- **Pluggable event bus**: `PostgresEventBus` adapter with
+  `LISTEN/NOTIFY` for fan-out across control-plane replicas; factory
+  selects between in-memory and Postgres transports.
+- **DB-backed job queue with claim semantics**: `PostgresJobQueue` —
+  visibility-timeout based claiming, stale-claim reclaim, and corrupt
+  payload eviction (no infinite re-claim loop on JSON parse errors).
+- **Leader election**: `PostgresLeaderElector` via advisory locks +
+  pooled-client destroy on error; `LeaderGatedLoop` wraps singleton
+  loops (reconciler, scheduler) with a self-scheduling async tick and
+  acquire-then-run / release-on-shutdown lifecycle.
+- **Stateless scheduler**: reads active-run counts from the DB
+  (`DbActiveRunCounter`) instead of in-process state, enabling N
+  control-plane replicas behind a load balancer.
+- **Migrations**: `003-job-queue.sql` and `004-active-run-index.sql`.
+- **Limitation note**: README and platform README link to the P45
+  follow-up roadmap; the 2-replica integration suite (P45-T7) is
+  scheduled for v0.2.1.
+
+### Added — Skill family + docs (since rc.2)
+
+- **`agentforge-workflow` skill**: guided workflow authoring that emits
+  a complete schema-valid `.agentforge/` directory.
+- **`agentforge-template-author` skill**: contributor guide for shipping
+  new templates under `packages/core/src/templates/`.
+- **`agentforge-debug` skill**: triages stuck or failing pipeline runs.
+- **`agentforge-cli` skill**: conversational front-end over the
+  `agentforge` / `agentforge-core` CLIs.
+- **Vercel skills publish pipeline** + validator + skills changelog +
+  version-bump release flow.
+- **README revamp**: harness-first framing, bullet hero, consolidated
+  "Learn more" launchpad; `npx` invocations scoped under
+  `@mandarnilange/*` across all docs.
+
+### Fixed
+
+- 8 CodeRabbit findings on PR #14 covering concurrent `acquire()` in the
+  local leader, overlapping leader-loop executions, postgres event-bus
+  teardown ordering and listener-leak on `LISTEN` failure, postgres
+  job-queue corrupt-payload handling, postgres leader-elector
+  pooled-client destruction on error paths, docker-availability second
+  `error` event, and a `db-active-run-counter` test that didn't
+  exercise the empty-rows fallback.
+
+### Notes
+
+- P45-T7 (two-replica integration test) deferred to v0.2.1.
+- `uuid <14.0.0` advisory reached through `dockerode@4.x` remains an
+  audit warning; AgentForge calls `uuid.v4()` exclusively and is not
+  exposed. Bump to `dockerode@5.x` is queued for v0.3 once
+  `@types/dockerode` ships v5.
+
 ## [0.2.0-rc.2] — Move both packages under `@mandarnilange/*`
 
 The framework package is now published as `@mandarnilange/agentforge-core`
