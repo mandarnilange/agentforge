@@ -29,6 +29,7 @@ import {
 	composeTimeoutSignal,
 	isTimeoutAbortError,
 } from "../utils/abort-signal.js";
+import { resolveModel } from "../utils/model-resolver.js";
 import { getRuntimeDefinitionStore } from "./definition-source.js";
 import { injectOutputSchemas } from "./prompt-schema-injector.js";
 import { getAgentInfo } from "./registry.js";
@@ -128,14 +129,25 @@ export function createAgent(
 				timeoutReason: `LLM call for agent "${agentId}" timed out after ${timeoutSeconds}s (set ${timeoutSource} to override)`,
 			});
 
+			// --model CLI flag > spec.model > config default. See resolveModel.
+			const llm = container.config.llm;
+			const resolved = resolveModel({
+				modelOverride: llm.modelOverride,
+				providerOverride: llm.providerOverride,
+				specModel: definition?.spec.model,
+				defaultProvider: llm.provider,
+				defaultName: llm.model,
+				defaultMaxTokens: llm.maxTokens,
+			});
 			const agentRequest: AgentRunRequest = {
 				agentId,
 				systemPrompt,
 				inputArtifacts,
 				model: {
-					provider: container.config.llm.provider,
-					name: container.config.llm.model,
-					maxTokens: container.config.llm.maxTokens,
+					provider: resolved.provider,
+					name: resolved.name,
+					maxTokens: resolved.maxTokens ?? llm.maxTokens,
+					thinking: resolved.thinking,
 				},
 				tools: definition?.spec.tools,
 				extensions: definition?.spec.extensions,

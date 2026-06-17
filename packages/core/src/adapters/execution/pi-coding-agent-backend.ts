@@ -8,7 +8,7 @@
  */
 
 import { isAbsolute } from "node:path";
-import type { AgentMessage } from "@mariozechner/pi-agent-core";
+import type { AgentMessage, ThinkingLevel } from "@mariozechner/pi-agent-core";
 import { Agent } from "@mariozechner/pi-agent-core";
 import type { Message } from "@mariozechner/pi-ai";
 import { getModel } from "@mariozechner/pi-ai";
@@ -34,6 +34,28 @@ import { maskSecrets } from "../secrets/secret-registry.js";
 import { checkBudget, computeCostUsd } from "./budget-check.js";
 import type { EventCallback, ProgressCallback } from "./pi-ai-backend.js";
 import { isOverloadedError, retryWithBackoff } from "./retry.js";
+
+/** Thinking levels accepted by pi-agent-core's Agent `thinkingLevel`. */
+const PI_AGENT_THINKING_LEVELS = new Set<ThinkingLevel>([
+	"off",
+	"minimal",
+	"low",
+	"medium",
+	"high",
+	"xhigh",
+]);
+
+/**
+ * Coerce an agent-supplied thinking string to a valid Agent thinking level,
+ * falling back to "medium". `spec.model.thinking` is free-form in the domain
+ * layer, so an invalid value (typo in YAML, bad CLI input) must not be cast
+ * blindly into the SDK.
+ */
+function toThinkingLevel(value: string | undefined): ThinkingLevel {
+	return value && PI_AGENT_THINKING_LEVELS.has(value as ThinkingLevel)
+		? (value as ThinkingLevel)
+		: "medium";
+}
 
 export class PiCodingAgentExecutionBackend implements IExecutionBackend {
 	private onProgress?: ProgressCallback;
@@ -127,7 +149,7 @@ export class PiCodingAgentExecutionBackend implements IExecutionBackend {
 			initialState: {
 				systemPrompt: request.systemPrompt,
 				model,
-				thinkingLevel: "medium",
+				thinkingLevel: toThinkingLevel(request.model.thinking),
 				tools,
 				messages: [],
 			},

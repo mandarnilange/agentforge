@@ -295,7 +295,7 @@ Your Docker image must follow this contract to work with the `DockerAgentExecuto
 | `AGENT_ID` | Agent name (as declared in the agent YAML `metadata.name`) |
 | `RUN_ID` | Unique run identifier |
 | `MODEL_PROVIDER` | LLM provider (e.g., `anthropic`) |
-| `MODEL_NAME` | Model name (e.g., `claude-sonnet-4-20250514`) |
+| `MODEL_NAME` | Model name (e.g., `claude-sonnet-4-6`) |
 | `API_KEY` | LLM API key |
 | `MAX_TOKENS` | Token limit |
 
@@ -415,7 +415,7 @@ Create `agentforge.config.json` in the project root:
 {
   "llm": {
     "provider": "anthropic",
-    "model": "claude-sonnet-4-20250514",
+    "model": "claude-sonnet-4-6",
     "maxTokens": 64000
   },
   "outputDir": "./output",
@@ -432,7 +432,7 @@ Create `agentforge.config.json` in the project root:
 | `GOOGLE_API_KEY` | — | Google AI API key (platform, for `gemini` executor) |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL (platform, for `ollama` executor) |
 | `AGENTFORGE_LLM_PROVIDER` | `anthropic` | LLM provider |
-| `AGENTFORGE_DEFAULT_MODEL` | `claude-sonnet-4-20250514` | Default model |
+| `AGENTFORGE_DEFAULT_MODEL` | `claude-sonnet-4-6` | Default model |
 | `AGENTFORGE_MAX_TOKENS` | `64000` | Max tokens per request |
 | `AGENTFORGE_LLM_TIMEOUT_SECONDS` | `600` | Wall-clock timeout per agent LLM call. Set `0` to disable. On timeout the pipeline fails with `Agent "X" timed out after Ns.` |
 | `AGENTFORGE_OUTPUT_DIR` | `./output` | Output directory |

@@ -267,7 +267,7 @@ agentforge node start --control-plane-url <url>   # Run as a worker (platform)
 | `ANTHROPIC_API_KEY` | Yes | — | Anthropic API key. |
 | `OPENAI_API_KEY` / `GOOGLE_API_KEY` | If using | — | Other providers. |
 | `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Ollama server URL. |
-| `AGENTFORGE_DEFAULT_MODEL` | No | `claude-sonnet-4-20250514` | Default model. |
+| `AGENTFORGE_DEFAULT_MODEL` | No | `claude-sonnet-4-6` | Default model. |
 | `AGENTFORGE_LLM_TIMEOUT_SECONDS` | No | `600` | Wall-clock timeout per LLM call (`0` disables). |
 | `AGENTFORGE_OUTPUT_DIR` / `AGENTFORGE_DIR` | No | `./output` / `./.agentforge` | Output and definitions paths. |
 | `AGENTFORGE_STATE_STORE` | No | `sqlite` | `sqlite` or `postgres`. |

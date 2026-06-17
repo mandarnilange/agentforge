@@ -18,6 +18,20 @@ export interface AppConfig {
 	llm: {
 		provider: "anthropic";
 		model: string;
+		/**
+		 * Explicit per-invocation model override (the `--model` CLI flag). When
+		 * set, it wins over an agent definition's `spec.model`. Distinct from
+		 * `model`, which is the default (config file / AGENTFORGE_DEFAULT_MODEL /
+		 * built-in) that an agent's `spec.model` is allowed to override.
+		 */
+		modelOverride?: string;
+		/**
+		 * Explicit provider override from the `--model provider/name` form. When
+		 * unset, a bare `--model name` keeps the default provider; with no
+		 * `--model` at all, the agent's spec.model provider (then the default)
+		 * applies.
+		 */
+		providerOverride?: string;
 		apiKey: string;
 		maxTokens: number;
 		/**
@@ -72,7 +86,7 @@ export function loadConfig(overrides?: ConfigOverrides): AppConfig {
 	const defaults: AppConfig = {
 		llm: {
 			provider: "anthropic",
-			model: "claude-sonnet-4-20250514",
+			model: "claude-sonnet-4-6",
 			apiKey: "",
 			maxTokens: 64000,
 			timeoutSeconds: 600,

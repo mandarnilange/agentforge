@@ -59,7 +59,7 @@ describe("loadConfig", () => {
 		const config = loadConfig();
 
 		expect(config.llm.provider).toBe("anthropic");
-		expect(config.llm.model).toBe("claude-sonnet-4-20250514");
+		expect(config.llm.model).toBe("claude-sonnet-4-6");
 		expect(config.llm.maxTokens).toBe(64000);
 		expect(config.outputDir).toContain("output");
 		expect(config.logLevel).toBe("info");

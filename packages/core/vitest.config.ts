@@ -4,6 +4,7 @@ export default defineConfig({
 	test: {
 		globals: true,
 		include: ["tests/**/*.test.ts"],
+		setupFiles: ["tests/setup/agentforge-dir.ts"],
 		coverage: {
 			provider: "v8",
 			include: ["src/**/*.ts"],

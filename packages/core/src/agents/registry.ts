@@ -19,6 +19,13 @@ export interface AgentInfo extends AgentSummary {
 	inputs: string[];
 	outputs: string[];
 	tools: string[];
+	/** Per-agent model override from the YAML `spec.model`, if declared. */
+	model?: {
+		provider: string;
+		name: string;
+		maxTokens?: number;
+		thinking?: string;
+	};
 }
 
 function definitionToInfo(def: AgentDefinitionYaml): AgentInfo {
@@ -33,6 +40,7 @@ function definitionToInfo(def: AgentDefinitionYaml): AgentInfo {
 		inputs: def.spec.inputs?.map((i) => i.type) ?? [],
 		outputs: def.spec.outputs.map((o) => o.type),
 		tools: def.spec.tools ?? [],
+		model: def.spec.model,
 	};
 }
 

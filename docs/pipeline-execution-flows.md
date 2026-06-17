@@ -429,7 +429,7 @@ agent_runs
   output_artifact_ids TEXT    -- JSON array of saved file paths
   token_usage         TEXT    -- JSON { inputTokens, outputTokens }
   provider            TEXT    -- e.g. "anthropic"
-  model_name          TEXT    -- e.g. "claude-sonnet-4-20250514"
+  model_name          TEXT    -- e.g. "claude-sonnet-4-6"
   cost_usd            REAL
   duration_ms         INTEGER
   error               TEXT    -- error message if failed

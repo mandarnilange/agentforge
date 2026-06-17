@@ -22,6 +22,12 @@ export interface AgentRunRequest {
 		readonly provider: string;
 		readonly name: string;
 		readonly maxTokens: number;
+		/**
+		 * Reasoning/thinking level (e.g. "low" | "medium" | "high"). Sourced from
+		 * the agent YAML `spec.model.thinking`. Backends map this to the
+		 * underlying SDK's thinking level; undefined means use the backend default.
+		 */
+		readonly thinking?: string;
 	};
 	readonly tools?: readonly string[];
 	/** Extension paths relative to the agentforge directory (.agentforge/). */

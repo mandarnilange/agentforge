@@ -45,7 +45,7 @@ spec:
   executor: pi-ai              # or: pi-coding-agent
   model:
     provider: anthropic
-    name: claude-sonnet-4-20250514
+    name: claude-sonnet-4-6
     maxTokens: 16384
 ```
 
@@ -110,7 +110,7 @@ spec:
   executor: pi-ai
   model:
     provider: anthropic
-    name: claude-sonnet-4-20250514
+    name: claude-sonnet-4-6
 
 # Agent: architect (architecture on Gemini)
 spec:

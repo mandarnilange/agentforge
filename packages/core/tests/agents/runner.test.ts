@@ -118,7 +118,9 @@ describe("AgentRunner.run()", () => {
 		expect(call.agentId).toBe("analyst");
 		expect(call.systemPrompt).toBe("You are an analyst agent.");
 		expect(call.model.provider).toBe("anthropic");
-		expect(call.model.name).toBe("claude-sonnet-4-20250514");
+		// The resolved analyst definition's spec.model overrides the container's
+		// config model (claude-sonnet-4-6 is the simple-sdlc analyst's model).
+		expect(call.model.name).toBe("claude-sonnet-4-6");
 	});
 
 	it("passes inline string input as raw-brief artifact", async () => {
@@ -315,6 +317,176 @@ spec:
 			.calls[0][0];
 		expect(call.tools).toBeUndefined();
 		expect(call.extensions).toBeUndefined();
+	});
+});
+
+describe("model override from agent YAML (spec.model)", () => {
+	let tmpDevforge: string;
+	let savedDevforgeDir: string | undefined;
+
+	beforeEach(() => {
+		tmpDevforge = join(tmpdir(), `agentforge-model-test-${Date.now()}`);
+		mkdirSync(join(tmpDevforge, "agents"), { recursive: true });
+		savedDevforgeDir = process.env.AGENTFORGE_DIR;
+		process.env.AGENTFORGE_DIR = tmpDevforge;
+	});
+
+	afterEach(() => {
+		rmSync(tmpDevforge, { recursive: true, force: true });
+		if (savedDevforgeDir !== undefined) {
+			process.env.AGENTFORGE_DIR = savedDevforgeDir;
+		} else {
+			delete process.env.AGENTFORGE_DIR;
+		}
+	});
+
+	function writeAgentWithModel(modelYaml: string): void {
+		writeFileSync(
+			join(tmpDevforge, "agents", "analyst.agent.yaml"),
+			`
+apiVersion: agentforge/v1
+kind: AgentDefinition
+metadata:
+  name: analyst
+  phase: "1"
+spec:
+  executor: pi-ai
+${modelYaml}
+  systemPrompt:
+    text: "You are a test agent."
+  outputs:
+    - type: frd
+`,
+		);
+	}
+
+	it("overrides provider, name, and maxTokens from spec.model", async () => {
+		writeAgentWithModel(
+			`  model:
+    provider: openai
+    name: gpt-5
+    maxTokens: 32768`,
+		);
+
+		const container = createMockContainer();
+		const runner = createAgent("analyst", container);
+		await runner.run({});
+
+		const call = vi.mocked(container.executionBackend.runAgent).mock
+			.calls[0][0];
+		expect(call.model.provider).toBe("openai");
+		expect(call.model.name).toBe("gpt-5");
+		expect(call.model.maxTokens).toBe(32768);
+	});
+
+	it("forwards thinking level from spec.model", async () => {
+		writeAgentWithModel(
+			`  model:
+    provider: anthropic
+    name: claude-sonnet-4-20250514
+    thinking: high`,
+		);
+
+		const container = createMockContainer();
+		const runner = createAgent("analyst", container);
+		await runner.run({});
+
+		const call = vi.mocked(container.executionBackend.runAgent).mock
+			.calls[0][0];
+		expect(call.model.thinking).toBe("high");
+	});
+
+	it("falls back to config maxTokens when spec.model omits it", async () => {
+		writeAgentWithModel(
+			`  model:
+    provider: anthropic
+    name: claude-opus-4-20250514`,
+		);
+
+		const container = createMockContainer();
+		const runner = createAgent("analyst", container);
+		await runner.run({});
+
+		const call = vi.mocked(container.executionBackend.runAgent).mock
+			.calls[0][0];
+		expect(call.model.provider).toBe("anthropic");
+		expect(call.model.name).toBe("claude-opus-4-20250514");
+		// container default maxTokens is 8192
+		expect(call.model.maxTokens).toBe(8192);
+	});
+
+	it("lets config.llm.modelOverride (--model) win over spec.model", async () => {
+		writeAgentWithModel(
+			`  model:
+    provider: anthropic
+    name: claude-sonnet-4-6
+    maxTokens: 16384`,
+		);
+
+		const container = createMockContainer();
+		container.config.llm.modelOverride = "claude-opus-4-6";
+		const runner = createAgent("analyst", container);
+		await runner.run({});
+
+		const call = vi.mocked(container.executionBackend.runAgent).mock
+			.calls[0][0];
+		// --model overrides the name; maxTokens still comes from spec; provider is
+		// the default (here equal to spec's anthropic).
+		expect(call.model.name).toBe("claude-opus-4-6");
+		expect(call.model.provider).toBe("anthropic");
+		expect(call.model.maxTokens).toBe(16384);
+	});
+
+	it("bare --model uses the default provider, not the spec provider", async () => {
+		writeAgentWithModel(
+			`  model:
+    provider: openai
+    name: gpt-4o`,
+		);
+
+		const container = createMockContainer(); // default provider: anthropic
+		container.config.llm.modelOverride = "claude-sonnet-4-6";
+		const runner = createAgent("analyst", container);
+		await runner.run({});
+
+		const call = vi.mocked(container.executionBackend.runAgent).mock
+			.calls[0][0];
+		expect(call.model.name).toBe("claude-sonnet-4-6");
+		expect(call.model.provider).toBe("anthropic");
+	});
+
+	it("--model provider/name overrides both provider and name", async () => {
+		writeAgentWithModel(
+			`  model:
+    provider: anthropic
+    name: claude-sonnet-4-6`,
+		);
+
+		const container = createMockContainer();
+		container.config.llm.modelOverride = "gpt-4o";
+		container.config.llm.providerOverride = "openai";
+		const runner = createAgent("analyst", container);
+		await runner.run({});
+
+		const call = vi.mocked(container.executionBackend.runAgent).mock
+			.calls[0][0];
+		expect(call.model.provider).toBe("openai");
+		expect(call.model.name).toBe("gpt-4o");
+	});
+
+	it("falls back entirely to config model when spec.model is absent", async () => {
+		writeAgentWithModel("");
+
+		const container = createMockContainer();
+		const runner = createAgent("analyst", container);
+		await runner.run({});
+
+		const call = vi.mocked(container.executionBackend.runAgent).mock
+			.calls[0][0];
+		expect(call.model.provider).toBe("anthropic");
+		expect(call.model.name).toBe("claude-sonnet-4-20250514");
+		expect(call.model.maxTokens).toBe(8192);
+		expect(call.model.thinking).toBeUndefined();
 	});
 });
 

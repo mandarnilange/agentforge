@@ -913,7 +913,7 @@ spec:
   executor: pi-coding-agent          # pi-ai (docs) or pi-coding-agent (code)
   model:
     provider: anthropic
-    name: claude-sonnet-4-20250514
+    name: claude-sonnet-4-6
     maxTokens: 64000
     thinking: true
   systemPrompt:
@@ -1304,7 +1304,7 @@ The user's Docker image must implement this contract:
 | `AGENT_ID` | Agent name | `developer` |
 | `RUN_ID` | Unique run identifier | `run-abc-123` |
 | `MODEL_PROVIDER` | LLM provider | `anthropic` |
-| `MODEL_NAME` | Model identifier | `claude-sonnet-4-20250514` |
+| `MODEL_NAME` | Model identifier | `claude-sonnet-4-6` |
 | `API_KEY` | LLM API key | `sk-ant-...` |
 | `MAX_TOKENS` | Token limit | `64000` |
 
@@ -1403,7 +1403,7 @@ Dashboard API                     ← GET /api/v1/runs/:id/artifacts
 
 | Model | Input | Output |
 |-------|-------|--------|
-| claude-sonnet-4-20250514 | $3.00 | $15.00 |
+| claude-sonnet-4-6 | $3.00 | $15.00 |
 | claude-opus-4-20250514 | $15.00 | $75.00 |
 | claude-haiku-4-5-20251001 | $0.80 | $4.00 |
 
@@ -1787,7 +1787,7 @@ npx tsx packages/core/src/cli/index.ts gate approve <id>      # Approve gate
 |----------|---------|---------|
 | `ANTHROPIC_API_KEY` | LLM authentication | (required) |
 | `AGENTFORGE_LLM_PROVIDER` | LLM provider | `anthropic` |
-| `AGENTFORGE_DEFAULT_MODEL` | Default model | `claude-sonnet-4-20250514` |
+| `AGENTFORGE_DEFAULT_MODEL` | Default model | `claude-sonnet-4-6` |
 | `AGENTFORGE_MAX_TOKENS` | Token limit per request | `64000` |
 | `AGENTFORGE_OUTPUT_DIR` | Output directory | `./output` |
 | `AGENTFORGE_PROMPTS_DIR` | Agent prompts directory | `src/agents/prompts` |

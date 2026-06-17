@@ -41,9 +41,15 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 // Dev layout: src/dashboard/server.ts — SPA at src/dashboard/dist/ (Vite output).
 const DIST_DIR_COMPILED = resolve(__dirname, "app");
 const DIST_DIR_SRC_FALLBACK = resolve(__dirname, "dist");
-const DIST_DIR = existsSync(DIST_DIR_COMPILED)
-	? DIST_DIR_COMPILED
-	: DIST_DIR_SRC_FALLBACK;
+// Prefer the Vite build output when it exists. In dev (`tsx` from src), the
+// sibling `app/` directory holds the React *source* (its index.html points at
+// /src/main.tsx and only works under the Vite dev server), while the built SPA
+// lives in `src/dashboard/dist/`. Checking the compiled `app/` first would
+// wrongly serve that un-built source. The Vite output dir only exists in the
+// dev tree, so in the compiled layout this falls through to dist/dashboard/app.
+const DIST_DIR = existsSync(DIST_DIR_SRC_FALLBACK)
+	? DIST_DIR_SRC_FALLBACK
+	: DIST_DIR_COMPILED;
 
 export type { PipelineExecutor };
 

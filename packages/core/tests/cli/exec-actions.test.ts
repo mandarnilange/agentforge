@@ -51,14 +51,17 @@ describe("exec command actions", () => {
 			expect(stdout).toContain("pi-ai");
 		});
 
-		it("shows model from env in dry-run output", async () => {
+		it("shows the agent's spec.model, overriding the env default", async () => {
+			// analyst declares spec.model (claude-sonnet-4-6), which wins over the
+			// AGENTFORGE_DEFAULT_MODEL config default — same precedence as a real run.
 			process.env.AGENTFORGE_DEFAULT_MODEL = "claude-test-model";
 			const { stdout } = await runExecCommand(["exec", "analyst", "--dry-run"]);
-			expect(stdout).toContain("claude-test-model");
+			expect(stdout).toContain("anthropic/claude-sonnet-4-6");
+			expect(stdout).not.toContain("claude-test-model");
 			delete process.env.AGENTFORGE_DEFAULT_MODEL;
 		});
 
-		it("shows custom model from --model flag", async () => {
+		it("shows custom model from --model flag (overriding spec.model)", async () => {
 			const { stdout } = await runExecCommand([
 				"exec",
 				"analyst",
@@ -66,7 +69,19 @@ describe("exec command actions", () => {
 				"--model",
 				"my-custom-model",
 			]);
-			expect(stdout).toContain("my-custom-model");
+			// bare --model keeps the default provider
+			expect(stdout).toContain("anthropic/my-custom-model");
+		});
+
+		it("shows provider and name from --model provider/name", async () => {
+			const { stdout } = await runExecCommand([
+				"exec",
+				"analyst",
+				"--dry-run",
+				"--model",
+				"openai/gpt-4o",
+			]);
+			expect(stdout).toContain("openai/gpt-4o");
 		});
 
 		it("shows output dir from --output flag", async () => {
