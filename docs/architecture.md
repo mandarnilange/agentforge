@@ -465,7 +465,7 @@ spec:
     - type: project-proposal
   model:
     provider: anthropic
-    name: claude-sonnet-4-20250514
+    name: claude-sonnet-4-6
     maxTokens: 64000
 ```
 

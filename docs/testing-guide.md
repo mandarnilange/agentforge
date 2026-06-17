@@ -58,7 +58,7 @@ npx tsx packages/core/src/cli/index.ts exec analyst --input "Build a SaaS invoic
 # --- DRY RUN ---
 # Agent:      analyst
 # Executor:   pi-ai
-# Model:      anthropic/claude-sonnet-4-20250514
+# Model:      anthropic/claude-sonnet-4-6
 # Output dir: ./output
 # Inputs:     raw-brief
 # Outputs:    requirements
@@ -253,7 +253,7 @@ npx tsx packages/core/src/cli/index.ts exec analyst \
 # Use Sonnet for production
 npx tsx packages/core/src/cli/index.ts exec analyst \
   --input brief.txt \
-  --model claude-sonnet-4-20250514
+  --model claude-sonnet-4-6
 ```
 
 ---

@@ -45,7 +45,7 @@ spec:
 
   model:
     provider: anthropic
-    name: claude-sonnet-4-20250514
+    name: claude-sonnet-4-6
     maxTokens: 16384
 
   systemPrompt:
@@ -253,7 +253,7 @@ agentforge-core logs <run-id>                # View logs
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `ANTHROPIC_API_KEY` | Yes | — | Anthropic API key. Missing key prints a friendly multi-line error with a link to `https://console.anthropic.com/settings/keys`. |
-| `AGENTFORGE_DEFAULT_MODEL` | No | `claude-sonnet-4-20250514` | Model name |
+| `AGENTFORGE_DEFAULT_MODEL` | No | `claude-sonnet-4-6` | Model name |
 | `AGENTFORGE_MAX_TOKENS` | No | `64000` | Max output tokens |
 | `AGENTFORGE_LLM_TIMEOUT_SECONDS` | No | `600` | Wall-clock timeout per agent LLM call. Set `0` to disable. |
 | `AGENTFORGE_OUTPUT_DIR` | No | `./output` | Artifact output directory |
