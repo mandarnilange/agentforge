@@ -7,6 +7,7 @@ import { getAgentInfo, getAllAgentIds } from "../../agents/registry.js";
 import { createAgent } from "../../agents/runner.js";
 import { loadConfig } from "../../di/config.js";
 import { createContainerForAgent } from "../../di/container.js";
+import { parseModelFlag, resolveModel } from "../../utils/model-resolver.js";
 
 interface ExecOptions {
 	input?: string;
@@ -29,7 +30,8 @@ export function registerExecCommand(program: Command): void {
 		.option("-p, --prompt <text>", "Additional user prompt")
 		.option(
 			"-m, --model <model>",
-			"LLM model to use (overrides AGENTFORGE_DEFAULT_MODEL)",
+			"LLM model to use as [provider/]name, e.g. claude-sonnet-4-6 or " +
+				"openai/gpt-4o (overrides the agent's spec.model and the default)",
 		)
 		.option("-v, --verbose", "Enable verbose logging")
 		.option(
@@ -54,10 +56,16 @@ async function executeAgent(agentId: string, opts: ExecOptions): Promise<void> {
 	// Build config overrides from CLI flags
 	const configOverrides: Record<string, unknown> = {};
 	if (opts.model) {
-		// `--model` is an explicit per-run override: it must win over an agent's
-		// spec.model. `modelOverride` is the dedicated channel the runner checks
-		// first; `model` is also set so direct config readers see the CLI value.
-		configOverrides.llm = { model: opts.model, modelOverride: opts.model };
+		// `--model [provider/]name` is an explicit per-run override that wins over
+		// an agent's spec.model. modelOverride/providerOverride are the dedicated
+		// channels the runner checks first; `model` mirrors the name so direct
+		// config readers see the CLI value.
+		const { provider, name } = parseModelFlag(opts.model);
+		configOverrides.llm = {
+			model: name,
+			modelOverride: name,
+			...(provider ? { providerOverride: provider } : {}),
+		};
 	}
 	if (opts.output) {
 		configOverrides.outputDir = opts.output;
@@ -66,18 +74,28 @@ async function executeAgent(agentId: string, opts: ExecOptions): Promise<void> {
 		configOverrides.logLevel = "debug";
 	}
 
-	// Dry run: show config without calling the LLM (no API key needed)
+	// Dry run: show config without calling the LLM (no API key needed).
+	// Resolve the model exactly as a real run would: --model > spec.model >
+	// AGENTFORGE_DEFAULT_MODEL > built-in default.
 	if (opts.dryRun) {
-		const provider = "anthropic";
-		const model =
-			opts.model ?? process.env.AGENTFORGE_DEFAULT_MODEL ?? "claude-sonnet-4-6";
+		const parsed = opts.model ? parseModelFlag(opts.model) : undefined;
+		const resolved = resolveModel({
+			modelOverride: parsed?.name,
+			providerOverride: parsed?.provider,
+			specModel: agentInfo.model,
+			defaultProvider: "anthropic",
+			defaultName: process.env.AGENTFORGE_DEFAULT_MODEL ?? "claude-sonnet-4-6",
+		});
 		const outputDir =
 			opts.output ?? process.env.AGENTFORGE_OUTPUT_DIR ?? "./output";
 
 		console.log("--- DRY RUN ---");
 		console.log(`Agent:      ${agentInfo.displayName} (${agentId})`);
 		console.log(`Executor:   ${agentInfo.executor}`);
-		console.log(`Model:      ${provider}/${model}`);
+		console.log(`Model:      ${resolved.provider}/${resolved.name}`);
+		if (resolved.maxTokens !== undefined)
+			console.log(`Max tokens: ${resolved.maxTokens}`);
+		if (resolved.thinking) console.log(`Thinking:   ${resolved.thinking}`);
 		console.log(`Output dir: ${outputDir}`);
 		console.log(`Inputs:     ${agentInfo.inputs.join(", ")}`);
 		console.log(`Outputs:    ${agentInfo.outputs.join(", ")}`);

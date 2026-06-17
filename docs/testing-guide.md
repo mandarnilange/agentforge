@@ -254,7 +254,17 @@ npx tsx packages/core/src/cli/index.ts exec analyst \
 npx tsx packages/core/src/cli/index.ts exec analyst \
   --input brief.txt \
   --model claude-sonnet-4-6
+
+# Override the provider too with provider/name
+npx tsx packages/core/src/cli/index.ts exec analyst \
+  --input brief.txt \
+  --model openai/gpt-4o
 ```
+
+`--model` overrides the agent's `spec.model`. A bare name (`claude-sonnet-4-6`)
+keeps the default provider; use `provider/name` (`openai/gpt-4o`) to override
+both. Precedence is `--model` > the agent's `spec.model` > `AGENTFORGE_DEFAULT_MODEL`
+/ config default.
 
 ---
 

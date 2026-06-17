@@ -22,7 +22,7 @@ spec:
     provider: anthropic
     name: claude-sonnet-4-6
     maxTokens: 16384
-    thinking: medium            # low | medium | high
+    thinking: medium            # minimal | low | medium | high | xhigh (pi-coding-agent also: off); invalid values fall back to medium
   systemPrompt:
     file: prompts/<name>.system.md   # XOR with text
     # text: |

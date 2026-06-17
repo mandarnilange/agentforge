@@ -26,6 +26,7 @@ import {
 	startPipelineSpan,
 	withSpanContext,
 } from "../observability/spans.js";
+import { resolveModel } from "../utils/model-resolver.js";
 
 export interface ExecuteResult {
 	pausedAtGate: boolean;
@@ -317,17 +318,23 @@ async function executeAgentRunViaExecutor(
 	// Build AgentJob from context
 	const inputs: ArtifactData[] = buildInputArtifacts(ctx.phaseInput);
 	const agentInfo = getAgentInfo(agentRun.agentName);
-	// Model precedence (highest first): --model CLI flag (modelOverride) → the
-	// agent's spec.model → config default. Cost estimation, metrics, and the
-	// persisted modelName all reflect what actually runs. The runner applies the
-	// same precedence for the live LLM call.
-	const yamlModel = agentInfo?.model;
+	// --model CLI flag > spec.model > config default. Cost estimation, metrics,
+	// and the persisted modelName all reflect what actually runs; the runner
+	// applies the same precedence for the live LLM call. See resolveModel.
+	const llm = ctx.config.llm;
+	const resolved = resolveModel({
+		modelOverride: llm.modelOverride,
+		providerOverride: llm.providerOverride,
+		specModel: agentInfo?.model,
+		defaultProvider: llm.provider,
+		defaultName: llm.model,
+		defaultMaxTokens: llm.maxTokens,
+	});
 	const resolvedModel = {
-		provider: yamlModel?.provider ?? ctx.config.llm.provider,
-		name:
-			ctx.config.llm.modelOverride ?? yamlModel?.name ?? ctx.config.llm.model,
-		maxTokens: yamlModel?.maxTokens ?? ctx.config.llm.maxTokens,
-		thinking: yamlModel?.thinking,
+		provider: resolved.provider,
+		name: resolved.name,
+		maxTokens: resolved.maxTokens ?? llm.maxTokens,
+		thinking: resolved.thinking,
 	};
 	const job: AgentJob = {
 		runId: agentRun.id,

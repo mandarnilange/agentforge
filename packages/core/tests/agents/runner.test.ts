@@ -430,10 +430,48 @@ ${modelYaml}
 
 		const call = vi.mocked(container.executionBackend.runAgent).mock
 			.calls[0][0];
-		// --model overrides the name, but provider/maxTokens still come from spec.
+		// --model overrides the name; maxTokens still comes from spec; provider is
+		// the default (here equal to spec's anthropic).
 		expect(call.model.name).toBe("claude-opus-4-6");
 		expect(call.model.provider).toBe("anthropic");
 		expect(call.model.maxTokens).toBe(16384);
+	});
+
+	it("bare --model uses the default provider, not the spec provider", async () => {
+		writeAgentWithModel(
+			`  model:
+    provider: openai
+    name: gpt-4o`,
+		);
+
+		const container = createMockContainer(); // default provider: anthropic
+		container.config.llm.modelOverride = "claude-sonnet-4-6";
+		const runner = createAgent("analyst", container);
+		await runner.run({});
+
+		const call = vi.mocked(container.executionBackend.runAgent).mock
+			.calls[0][0];
+		expect(call.model.name).toBe("claude-sonnet-4-6");
+		expect(call.model.provider).toBe("anthropic");
+	});
+
+	it("--model provider/name overrides both provider and name", async () => {
+		writeAgentWithModel(
+			`  model:
+    provider: anthropic
+    name: claude-sonnet-4-6`,
+		);
+
+		const container = createMockContainer();
+		container.config.llm.modelOverride = "gpt-4o";
+		container.config.llm.providerOverride = "openai";
+		const runner = createAgent("analyst", container);
+		await runner.run({});
+
+		const call = vi.mocked(container.executionBackend.runAgent).mock
+			.calls[0][0];
+		expect(call.model.provider).toBe("openai");
+		expect(call.model.name).toBe("gpt-4o");
 	});
 
 	it("falls back entirely to config model when spec.model is absent", async () => {

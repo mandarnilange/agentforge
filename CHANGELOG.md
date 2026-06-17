@@ -24,6 +24,13 @@ run used the global config model regardless of what the agent declared.
 - **Model precedence** (highest first): `--model` CLI flag → agent
   `spec.model` → config default (config file / `AGENTFORGE_DEFAULT_MODEL` /
   built-in). An explicit `--model` still overrides an agent's declared model.
+- **`--model` accepts `[provider/]name`**: a bare name (`claude-sonnet-4-6`)
+  overrides the model name and uses the default provider; `provider/name`
+  (`openai/gpt-4o`) overrides both, avoiding a name/provider mismatch when an
+  agent declares a non-default provider.
+- **`exec --dry-run`** now resolves and prints the model the agent would
+  actually use (including `spec.model` provider/name, plus `maxTokens` and
+  `thinking`) instead of only the CLI/env default.
 - **Pipeline accounting**: persisted `modelName`/`provider`, metrics, and cost
   estimation now reflect the model that actually ran.
 - **Default model** bumped to `claude-sonnet-4-6` across shipped templates,

@@ -29,6 +29,7 @@ import {
 	composeTimeoutSignal,
 	isTimeoutAbortError,
 } from "../utils/abort-signal.js";
+import { resolveModel } from "../utils/model-resolver.js";
 import { getRuntimeDefinitionStore } from "./definition-source.js";
 import { injectOutputSchemas } from "./prompt-schema-injector.js";
 import { getAgentInfo } from "./registry.js";
@@ -128,25 +129,25 @@ export function createAgent(
 				timeoutReason: `LLM call for agent "${agentId}" timed out after ${timeoutSeconds}s (set ${timeoutSource} to override)`,
 			});
 
-			// Model precedence (highest first):
-			//   1. --model CLI flag (config.llm.modelOverride) — explicit per run
-			//   2. the agent definition's spec.model
-			//   3. config default (config file / AGENTFORGE_DEFAULT_MODEL / built-in)
-			// Provider/maxTokens have no CLI override, so spec.model wins over config
-			// for those; thinking comes only from the definition.
-			const yamlModel = definition?.spec.model;
+			// --model CLI flag > spec.model > config default. See resolveModel.
+			const llm = container.config.llm;
+			const resolved = resolveModel({
+				modelOverride: llm.modelOverride,
+				providerOverride: llm.providerOverride,
+				specModel: definition?.spec.model,
+				defaultProvider: llm.provider,
+				defaultName: llm.model,
+				defaultMaxTokens: llm.maxTokens,
+			});
 			const agentRequest: AgentRunRequest = {
 				agentId,
 				systemPrompt,
 				inputArtifacts,
 				model: {
-					provider: yamlModel?.provider ?? container.config.llm.provider,
-					name:
-						container.config.llm.modelOverride ??
-						yamlModel?.name ??
-						container.config.llm.model,
-					maxTokens: yamlModel?.maxTokens ?? container.config.llm.maxTokens,
-					thinking: yamlModel?.thinking,
+					provider: resolved.provider,
+					name: resolved.name,
+					maxTokens: resolved.maxTokens ?? llm.maxTokens,
+					thinking: resolved.thinking,
 				},
 				tools: definition?.spec.tools,
 				extensions: definition?.spec.extensions,

@@ -25,6 +25,13 @@ export interface AppConfig {
 		 * built-in) that an agent's `spec.model` is allowed to override.
 		 */
 		modelOverride?: string;
+		/**
+		 * Explicit provider override from the `--model provider/name` form. When
+		 * unset, a bare `--model name` keeps the default provider; with no
+		 * `--model` at all, the agent's spec.model provider (then the default)
+		 * applies.
+		 */
+		providerOverride?: string;
 		apiKey: string;
 		maxTokens: number;
 		/**
