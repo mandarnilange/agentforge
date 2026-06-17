@@ -7,9 +7,10 @@
 import type {
 	AssistantMessage,
 	Context,
+	ThinkingLevel,
 	UserMessage,
 } from "@mariozechner/pi-ai";
-import { getModel, stream } from "@mariozechner/pi-ai";
+import { getModel, streamSimple } from "@mariozechner/pi-ai";
 import type { ArtifactData } from "../../domain/models/artifact.model.js";
 import type {
 	AgentEvent,
@@ -37,6 +38,29 @@ export type ProgressCallback = (event: {
 
 /** Callback for real-time log entries during execution */
 export type EventCallback = (entry: ConversationEntry) => void;
+
+/** Thinking levels accepted by pi-ai's streamSimple `reasoning` option. */
+const PI_AI_THINKING_LEVELS = new Set<ThinkingLevel>([
+	"minimal",
+	"low",
+	"medium",
+	"high",
+	"xhigh",
+]);
+
+/**
+ * Coerce an agent-supplied thinking string to a valid pi-ai reasoning level.
+ * `spec.model.thinking` is a free-form string in the domain layer, so an
+ * invalid value (typo in YAML, bad CLI input) must not reach the provider.
+ * Returns undefined when unset or unrecognized so `reasoning` is simply omitted.
+ */
+function toReasoningLevel(
+	value: string | undefined,
+): ThinkingLevel | undefined {
+	return value && PI_AI_THINKING_LEVELS.has(value as ThinkingLevel)
+		? (value as ThinkingLevel)
+		: undefined;
+}
 
 export class PiAiExecutionBackend implements IExecutionBackend {
 	private onProgress?: ProgressCallback;
@@ -82,9 +106,15 @@ export class PiAiExecutionBackend implements IExecutionBackend {
 				response: AssistantMessage;
 				outputTokens: number;
 			}> => {
-				const s = stream(model, context, {
+				// streamSimple maps the provider-agnostic `reasoning` option to each
+				// provider's native thinking/reasoning controls. Only set it when the
+				// agent declared a valid thinking level so default behaviour is
+				// unchanged for unset/invalid values.
+				const reasoning = toReasoningLevel(request.model.thinking);
+				const s = streamSimple(model, context, {
 					maxTokens: request.model.maxTokens,
 					signal: request.signal,
+					...(reasoning ? { reasoning } : {}),
 				});
 
 				let outputTokens = 0;

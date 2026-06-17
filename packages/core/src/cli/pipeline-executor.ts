@@ -316,23 +316,32 @@ async function executeAgentRunViaExecutor(
 
 	// Build AgentJob from context
 	const inputs: ArtifactData[] = buildInputArtifacts(ctx.phaseInput);
+	const agentInfo = getAgentInfo(agentRun.agentName);
+	// Model precedence (highest first): --model CLI flag (modelOverride) → the
+	// agent's spec.model → config default. Cost estimation, metrics, and the
+	// persisted modelName all reflect what actually runs. The runner applies the
+	// same precedence for the live LLM call.
+	const yamlModel = agentInfo?.model;
+	const resolvedModel = {
+		provider: yamlModel?.provider ?? ctx.config.llm.provider,
+		name:
+			ctx.config.llm.modelOverride ?? yamlModel?.name ?? ctx.config.llm.model,
+		maxTokens: yamlModel?.maxTokens ?? ctx.config.llm.maxTokens,
+		thinking: yamlModel?.thinking,
+	};
 	const job: AgentJob = {
 		runId: agentRun.id,
 		agentId: agentRun.agentName,
 		agentDefinition: {
 			metadata: { name: agentRun.agentName },
 			spec: {
-				executor: getAgentInfo(agentRun.agentName)?.executor ?? "pi-ai",
+				executor: agentInfo?.executor ?? "pi-ai",
 			},
 		},
 		inputs,
 		workdir: ctx.sourceDir,
 		outputDir: ctx.phaseOutputDir,
-		model: {
-			provider: ctx.config.llm.provider,
-			name: ctx.config.llm.model,
-			maxTokens: ctx.config.llm.maxTokens,
-		},
+		model: resolvedModel,
 		revisionNotes: agentRun.revisionNotes,
 	};
 
@@ -395,8 +404,8 @@ async function executeAgentRunViaExecutor(
 			durationMs: result.durationMs,
 			tokenUsage: result.tokenUsage,
 			outputArtifactIds: [...result.savedFiles],
-			provider: ctx.config.llm.provider,
-			modelName: ctx.config.llm.model,
+			provider: resolvedModel.provider,
+			modelName: resolvedModel.name,
 			costUsd: result.costUsd,
 		});
 		if (result.conversationLog && result.conversationLog.length > 0) {
@@ -427,8 +436,8 @@ async function executeAgentRunViaExecutor(
 		);
 		metrics.recordRunCost(
 			agentRun.agentName,
-			ctx.config.llm.provider,
-			ctx.config.llm.model,
+			resolvedModel.provider,
+			resolvedModel.name,
 			result.costUsd,
 		);
 		await ctx.controller.onAgentRunCompleted(agentRun.id, [
@@ -449,8 +458,8 @@ async function executeAgentRunViaExecutor(
 		await ctx.store.updateAgentRun(agentRun.id, {
 			durationMs: result.durationMs,
 			tokenUsage: result.tokenUsage,
-			provider: ctx.config.llm.provider,
-			modelName: ctx.config.llm.model,
+			provider: resolvedModel.provider,
+			modelName: resolvedModel.name,
 			costUsd: result.costUsd,
 		});
 		if (result.conversationLog && result.conversationLog.length > 0) {

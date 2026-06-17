@@ -3,6 +3,32 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0] — Per-agent model selection
+
+Agent definitions can now choose their own model. Previously `spec.model`
+(provider/name/maxTokens/thinking) was parsed but silently ignored — every
+run used the global config model regardless of what the agent declared.
+
+### Added
+
+- **`spec.model` now drives execution**: an agent's declared provider, model
+  name, and `maxTokens` are honored for both single-agent `exec` and pipeline
+  runs, falling back to config per field when omitted.
+- **`thinking` wired end-to-end**: `spec.model.thinking` maps to the pi-ai
+  `reasoning` option and the pi-coding-agent `thinkingLevel`. Invalid levels
+  are validated and safely coerced (omitted for pi-ai; defaults to `medium`
+  for pi-coding-agent) so a typo can't reach the provider API.
+
+### Changed
+
+- **Model precedence** (highest first): `--model` CLI flag → agent
+  `spec.model` → config default (config file / `AGENTFORGE_DEFAULT_MODEL` /
+  built-in). An explicit `--model` still overrides an agent's declared model.
+- **Pipeline accounting**: persisted `modelName`/`provider`, metrics, and cost
+  estimation now reflect the model that actually ran.
+- **Default model** bumped to `claude-sonnet-4-6` across shipped templates,
+  the `init`-generated config, and the built-in config default.
+
 ## [0.2.0] — First stable: config validation, distributed control plane, skill family
 
 First stable release on the `@mandarnilange/*` scope. Promotes the rc.2

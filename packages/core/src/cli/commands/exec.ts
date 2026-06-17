@@ -54,7 +54,10 @@ async function executeAgent(agentId: string, opts: ExecOptions): Promise<void> {
 	// Build config overrides from CLI flags
 	const configOverrides: Record<string, unknown> = {};
 	if (opts.model) {
-		configOverrides.llm = { model: opts.model };
+		// `--model` is an explicit per-run override: it must win over an agent's
+		// spec.model. `modelOverride` is the dedicated channel the runner checks
+		// first; `model` is also set so direct config readers see the CLI value.
+		configOverrides.llm = { model: opts.model, modelOverride: opts.model };
 	}
 	if (opts.output) {
 		configOverrides.outputDir = opts.output;
@@ -67,9 +70,7 @@ async function executeAgent(agentId: string, opts: ExecOptions): Promise<void> {
 	if (opts.dryRun) {
 		const provider = "anthropic";
 		const model =
-			opts.model ??
-			process.env.AGENTFORGE_DEFAULT_MODEL ??
-			"claude-sonnet-4-20250514";
+			opts.model ?? process.env.AGENTFORGE_DEFAULT_MODEL ?? "claude-sonnet-4-6";
 		const outputDir =
 			opts.output ?? process.env.AGENTFORGE_OUTPUT_DIR ?? "./output";
 

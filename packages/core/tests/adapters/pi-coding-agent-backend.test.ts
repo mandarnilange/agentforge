@@ -147,6 +147,38 @@ describe("PiCodingAgentExecutionBackend", () => {
 			expect(opts?.initialState?.thinkingLevel).toBe("medium");
 		});
 
+		it("uses a valid model.thinking level as the Agent thinkingLevel", async () => {
+			await backend.runAgent(
+				makeRequest({
+					model: {
+						provider: "anthropic",
+						name: "claude-sonnet-4-6",
+						maxTokens: 8192,
+						thinking: "high",
+					},
+				}),
+			);
+
+			const opts = mockAgentConstructor.mock.calls[0][0];
+			expect(opts?.initialState?.thinkingLevel).toBe("high");
+		});
+
+		it("falls back to medium when model.thinking is not a valid level", async () => {
+			await backend.runAgent(
+				makeRequest({
+					model: {
+						provider: "anthropic",
+						name: "claude-sonnet-4-6",
+						maxTokens: 8192,
+						thinking: "bogus-level",
+					},
+				}),
+			);
+
+			const opts = mockAgentConstructor.mock.calls[0][0];
+			expect(opts?.initialState?.thinkingLevel).toBe("medium");
+		});
+
 		it("should subscribe to agent events", async () => {
 			await backend.runAgent(makeRequest());
 			expect(mockSubscribe).toHaveBeenCalledOnce();

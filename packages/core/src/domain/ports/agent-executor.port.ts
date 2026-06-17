@@ -28,6 +28,8 @@ export interface AgentJob {
 		readonly provider: string;
 		readonly name: string;
 		readonly maxTokens: number;
+		/** Reasoning/thinking level from the agent YAML `spec.model.thinking`. */
+		readonly thinking?: string;
 	};
 	readonly revisionNotes?: string;
 	readonly identity?: AgentJobIdentity;

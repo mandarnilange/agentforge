@@ -269,9 +269,11 @@ describe("executePipeline with IAgentExecutor (P18-T3)", () => {
 		expect(capturedJobs).toHaveLength(1);
 		const job = capturedJobs[0];
 		expect(job.agentId).toBe("analyst");
+		// The agent definition's spec.model wins over the global config, so the
+		// job carries the analyst's declared model (not STUB_CONFIG's values).
 		expect(job.model.provider).toBe("anthropic");
-		expect(job.model.name).toBe("claude-sonnet-4-20250514");
-		expect(job.model.maxTokens).toBe(64000);
+		expect(job.model.name).toBe("claude-sonnet-4-6");
+		expect(job.model.maxTokens).toBe(16384);
 		expect(job.outputDir).toContain("phase-1");
 		expect(job.workdir).toBeTruthy();
 	});

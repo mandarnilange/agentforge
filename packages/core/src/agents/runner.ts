@@ -128,14 +128,25 @@ export function createAgent(
 				timeoutReason: `LLM call for agent "${agentId}" timed out after ${timeoutSeconds}s (set ${timeoutSource} to override)`,
 			});
 
+			// Model precedence (highest first):
+			//   1. --model CLI flag (config.llm.modelOverride) — explicit per run
+			//   2. the agent definition's spec.model
+			//   3. config default (config file / AGENTFORGE_DEFAULT_MODEL / built-in)
+			// Provider/maxTokens have no CLI override, so spec.model wins over config
+			// for those; thinking comes only from the definition.
+			const yamlModel = definition?.spec.model;
 			const agentRequest: AgentRunRequest = {
 				agentId,
 				systemPrompt,
 				inputArtifacts,
 				model: {
-					provider: container.config.llm.provider,
-					name: container.config.llm.model,
-					maxTokens: container.config.llm.maxTokens,
+					provider: yamlModel?.provider ?? container.config.llm.provider,
+					name:
+						container.config.llm.modelOverride ??
+						yamlModel?.name ??
+						container.config.llm.model,
+					maxTokens: yamlModel?.maxTokens ?? container.config.llm.maxTokens,
+					thinking: yamlModel?.thinking,
 				},
 				tools: definition?.spec.tools,
 				extensions: definition?.spec.extensions,

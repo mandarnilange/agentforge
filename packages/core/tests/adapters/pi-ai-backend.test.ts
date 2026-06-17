@@ -13,17 +13,17 @@ vi.mock("@mariozechner/pi-ai", () => {
 			api: "anthropic-messages",
 			provider: "anthropic",
 		}),
-		stream: vi.fn(),
+		streamSimple: vi.fn(),
 	};
 });
 
-import { getModel, stream } from "@mariozechner/pi-ai";
+import { getModel, streamSimple } from "@mariozechner/pi-ai";
 
-type MockedStream = ReturnType<typeof stream>;
+type MockedStream = ReturnType<typeof streamSimple>;
 
 import { PiAiExecutionBackend } from "../../src/adapters/execution/pi-ai-backend.js";
 
-const mockedStream = vi.mocked(stream);
+const mockedStream = vi.mocked(streamSimple);
 const mockedGetModel = vi.mocked(getModel);
 
 function makeRequest(
@@ -149,6 +149,66 @@ describe("PiAiExecutionBackend", () => {
 
 			const [, , options] = mockedStream.mock.calls[0];
 			expect(options?.signal).toBe(controller.signal);
+		});
+
+		it("passes reasoning to stream options when model.thinking is set", async () => {
+			const responseText = JSON.stringify({
+				artifacts: { frd: { projectName: "Test" } },
+			});
+			mockedStream.mockReturnValueOnce(
+				mockStreamResult(makeAssistantMessage(responseText)),
+			);
+
+			await backend.runAgent(
+				makeRequest({
+					model: {
+						provider: "anthropic",
+						name: "claude-sonnet-4-6",
+						maxTokens: 8192,
+						thinking: "high",
+					},
+				}),
+			);
+
+			const [, , options] = mockedStream.mock.calls[0];
+			expect((options as { reasoning?: string })?.reasoning).toBe("high");
+		});
+
+		it("omits reasoning from stream options when model.thinking is unset", async () => {
+			const responseText = JSON.stringify({
+				artifacts: { frd: { projectName: "Test" } },
+			});
+			mockedStream.mockReturnValueOnce(
+				mockStreamResult(makeAssistantMessage(responseText)),
+			);
+
+			await backend.runAgent(makeRequest());
+
+			const [, , options] = mockedStream.mock.calls[0];
+			expect((options as { reasoning?: string })?.reasoning).toBeUndefined();
+		});
+
+		it("omits reasoning when model.thinking is not a valid level", async () => {
+			const responseText = JSON.stringify({
+				artifacts: { frd: { projectName: "Test" } },
+			});
+			mockedStream.mockReturnValueOnce(
+				mockStreamResult(makeAssistantMessage(responseText)),
+			);
+
+			await backend.runAgent(
+				makeRequest({
+					model: {
+						provider: "anthropic",
+						name: "claude-sonnet-4-6",
+						maxTokens: 8192,
+						thinking: "bogus-level",
+					},
+				}),
+			);
+
+			const [, , options] = mockedStream.mock.calls[0];
+			expect((options as { reasoning?: string })?.reasoning).toBeUndefined();
 		});
 
 		it("should include input artifacts as context in user message", async () => {
