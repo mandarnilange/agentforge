@@ -9,7 +9,7 @@
 # Platform image runs agentforge with Docker/Postgres/OTel/worker modes.
 
 # ── Stage: deps — install all workspace deps (for building) ─────────────────
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/core/package.json ./packages/core/
@@ -35,14 +35,14 @@ RUN npm run build
 # Installs just agentforge-core's deps in isolation (no workspace hoisting,
 # no platform-only deps like pg/dockerode/OTel SDK). Uses a standalone
 # lockfile (packages/core/package-lock.json) so builds are deterministic.
-FROM node:20-alpine AS core-deps
+FROM node:22-alpine AS core-deps
 WORKDIR /app/packages/core
 COPY packages/core/package.json ./package.json
 COPY packages/core/package-lock.json ./package-lock.json
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
 # ── Stage: platform-deps — full workspace production node_modules ───────────
-FROM node:20-alpine AS platform-deps
+FROM node:22-alpine AS platform-deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/core/package.json ./packages/core/
@@ -50,7 +50,7 @@ COPY packages/platform/package.json ./packages/platform/
 RUN npm ci --omit=dev && npm cache clean --force
 
 # ── Target: core — slim image (agentforge-core CLI only) ────────────────────
-FROM node:20-alpine AS core
+FROM node:22-alpine AS core
 WORKDIR /app
 COPY --from=core-deps /app/packages/core/node_modules ./packages/core/node_modules
 COPY --from=core-deps /app/packages/core/package.json ./packages/core/package.json

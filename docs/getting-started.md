@@ -47,7 +47,7 @@ npx @mandarnilange/agentforge run --project my-saas --input "brief=Build a SaaS 
 
 ## 2. Prerequisites
 
-- **Node.js** 20 or later
+- **Node.js** 22.19 or later (required by the bundled pi execution backends)
 - **npm** 9 or later
 - **An LLM API key** (Anthropic by default)
 - **Docker** (optional — for sandboxed execution and Docker executor mode)
@@ -355,7 +355,7 @@ Write a result manifest to `/output/_result.json`:
 ### Example Dockerfile
 
 ```dockerfile
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY package.json .
 RUN npm ci

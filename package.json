@@ -24,7 +24,7 @@
 		"clean": "rm -rf packages/core/dist packages/core/tsconfig.tsbuildinfo packages/core/src/dashboard/dist packages/platform/dist packages/platform/tsconfig.tsbuildinfo"
 	},
 	"engines": {
-		"node": ">=20.0.0"
+		"node": ">=22.19.0"
 	},
 	"license": "MIT",
 	"devDependencies": {

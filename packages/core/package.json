@@ -41,7 +41,7 @@
 		"url": "https://github.com/mandarnilange/agentforge/issues"
 	},
 	"engines": {
-		"node": ">=20.0.0"
+		"node": ">=22.19.0"
 	},
 	"license": "MIT",
 	"repository": {

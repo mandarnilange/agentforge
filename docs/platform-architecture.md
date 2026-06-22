@@ -1887,7 +1887,7 @@ To build a custom Docker image for the `DockerAgentExecutor`:
 **Dockerfile example:**
 
 ```dockerfile
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 
 # Install your agent runtime
