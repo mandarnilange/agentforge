@@ -275,7 +275,7 @@ Two backends implement `IExecutionBackend`, selected per-agent based on the agen
 │                │    │                             │
 │  executor:     │    │  executor: pi-coding-agent  │
 │  "pi-ai"       │    │                             │
-│                │    │  Wraps @mariozechner/       │
+│                │    │  Wraps @earendil-works/     │
 │  Uses stream() │    │  pi-agent-core Agent        │
 │  from pi-ai    │    │                             │
 │                │    │  Has access to tools:       │

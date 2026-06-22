@@ -1,6 +1,6 @@
 {
 	"name": "agentforge-monorepo",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"private": true,
 	"description": "AgentForge — open framework for agentic workflows. Bring your process, LLMs, scripts, agents, and infra; we handle the orchestration.",
 	"type": "module",

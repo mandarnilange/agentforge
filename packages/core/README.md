@@ -26,6 +26,21 @@ npx @mandarnilange/agentforge-core dashboard
 # Open http://localhost:3001
 ```
 
+> **npm 11+ note — approve native install scripts.** npm now blocks dependency
+> install scripts by default. This package depends on the native module
+> `better-sqlite3` (and `koffi`), which **need** their build scripts to compile.
+> If your install warns that packages are "not yet covered by allowScripts",
+> approve and rebuild them:
+>
+> ```bash
+> npm approve-scripts better-sqlite3 koffi
+> npm rebuild
+> ```
+>
+> Skipping this leaves `better-sqlite3` uncompiled and the package fails at
+> runtime with a native-binding load error. Avoid `--all` /
+> `--dangerously-allow-all-scripts`: approve only the packages you trust.
+
 ## Defining Agents
 
 Create `.agentforge/agents/my-agent.agent.yaml`:

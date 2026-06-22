@@ -623,8 +623,8 @@ interface IExecutionBackend {
 
 | Backend | Library | Used By | Capabilities |
 |---------|---------|---------|-------------|
-| `PiAiExecutionBackend` | `@mariozechner/pi-ai` | Pure-LLM agents (e.g., analyst, architect) | LLM streaming, document generation |
-| `PiCodingAgentExecutionBackend` | `@mariozechner/pi-coding-agent` | Tool-using agents (e.g., developer, QA, security) | LLM + file tools + bash |
+| `PiAiExecutionBackend` | `@earendil-works/pi-ai` | Pure-LLM agents (e.g., analyst, architect) | LLM streaming, document generation |
+| `PiCodingAgentExecutionBackend` | `@earendil-works/pi-coding-agent` | Tool-using agents (e.g., developer, QA, security) | LLM + file tools + bash |
 
 **Backend selection**: Based on `agentDefinition.spec.executor` field (`"pi-ai"` or `"pi-coding-agent"`).
 
@@ -1631,8 +1631,8 @@ Implements domain ports with concrete technologies:
 | `SqliteStateStore` | `IStateStore` | better-sqlite3 |
 | `FsArtifactStore` | `IArtifactStore` | Node.js fs |
 | `FilePromptLoader` | `IPromptLoader` | Node.js fs |
-| `PiAiExecutionBackend` | `IExecutionBackend` | @mariozechner/pi-ai |
-| `PiCodingAgentExecutionBackend` | `IExecutionBackend` | @mariozechner/pi-coding-agent |
+| `PiAiExecutionBackend` | `IExecutionBackend` | @earendil-works/pi-ai |
+| `PiCodingAgentExecutionBackend` | `IExecutionBackend` | @earendil-works/pi-coding-agent |
 | `LocalAgentExecutor` | `IAgentExecutor` | In-process |
 | `DockerAgentExecutor` | `IAgentExecutor` | dockerode |
 | `RemoteAgentExecutor` | `IAgentExecutor` | HTTP/fetch |

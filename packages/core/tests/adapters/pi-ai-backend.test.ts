@@ -5,7 +5,7 @@ import type {
 } from "../../src/domain/ports/execution-backend.port.js";
 
 // Mock the pi-ai module before importing the backend
-vi.mock("@mariozechner/pi-ai", () => {
+vi.mock("@earendil-works/pi-ai", () => {
 	return {
 		getModel: vi.fn().mockReturnValue({
 			id: "claude-sonnet-4-20250514",
@@ -17,7 +17,7 @@ vi.mock("@mariozechner/pi-ai", () => {
 	};
 });
 
-import { getModel, streamSimple } from "@mariozechner/pi-ai";
+import { getModel, streamSimple } from "@earendil-works/pi-ai";
 
 type MockedStream = ReturnType<typeof streamSimple>;
 

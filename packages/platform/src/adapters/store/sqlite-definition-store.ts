@@ -14,7 +14,8 @@ import type {
 	PipelineDefinitionYaml,
 } from "@mandarnilange/agentforge-core/definitions/parser.js";
 import type { DefinitionStore } from "@mandarnilange/agentforge-core/definitions/store.js";
-import Database from "better-sqlite3";
+import { loadBetterSqlite } from "@mandarnilange/agentforge-core/state/native-sqlite.js";
+import type Database from "better-sqlite3";
 
 export type DefinitionKind =
 	| "AgentDefinition"
@@ -97,7 +98,8 @@ export class SqliteDefinitionStore {
 	private readonly db: Database.Database;
 
 	constructor(dbPath: string) {
-		this.db = new Database(dbPath);
+		const DatabaseCtor = loadBetterSqlite();
+		this.db = new DatabaseCtor(dbPath);
 		this.db.pragma("journal_mode = WAL");
 		this.db.pragma("foreign_keys = ON");
 		applySqliteMigrationsSync(this.db, DEFINITIONS_MIGRATIONS_DIR);

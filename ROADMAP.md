@@ -53,7 +53,7 @@ spec:
 
 ### OpenCode execution backend
 
-**Problem.** `@mandarnilange/agentforge-core` ships with `@mariozechner/pi-coding-agent` as the only coding runtime. The `IExecutionBackend` port exists so others can plug in, but no adapter has been written yet. OpenCode is a strong candidate — actively developed, TypeScript, similar tool surface.
+**Problem.** `@mandarnilange/agentforge-core` ships with `@earendil-works/pi-coding-agent` as the only coding runtime. The `IExecutionBackend` port exists so others can plug in, but no adapter has been written yet. OpenCode is a strong candidate — actively developed, TypeScript, similar tool surface.
 
 **Proposal.** New `OpenCodeExecutionBackend` in the platform package. Accepts an `AgentJob`, delegates to OpenCode's CLI or SDK, forwards status updates back via the `onStatus` callback, returns an `AgentJobResult`. Config via agent YAML `executor: opencode`.
 
