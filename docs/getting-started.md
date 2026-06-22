@@ -47,7 +47,7 @@ npx @mandarnilange/agentforge run --project my-saas --input "brief=Build a SaaS 
 
 ## 2. Prerequisites
 
-- **Node.js** 20 or later
+- **Node.js** 22.19 or later (required by the bundled pi execution backends)
 - **npm** 9 or later
 - **An LLM API key** (Anthropic by default)
 - **Docker** (optional — for sandboxed execution and Docker executor mode)
@@ -66,6 +66,19 @@ npm install @mandarnilange/agentforge
 
 > Both packages are scoped under `@mandarnilange/*`. The CLI binaries — `agentforge` (platform) and `agentforge-core` (core only) — are unchanged; only the install paths carry the scope.
 
+> **npm 11+ — approve native install scripts.** npm now blocks dependency install
+> scripts by default. AgentForge depends on the native module `better-sqlite3`
+> (and `koffi`), which **need** their build scripts to compile. If your install
+> warns that packages are "not yet covered by allowScripts", approve and rebuild
+> them, otherwise AgentForge fails at runtime with a native-binding load error:
+>
+> ```bash
+> npm approve-scripts better-sqlite3 koffi
+> npm rebuild
+> ```
+>
+> Approve only the packages you trust — avoid `--all` / `--dangerously-allow-all-scripts`.
+
 If you want the framework primitives without the platform binary or the multi-provider / Postgres / Docker executor extras, install core directly:
 
 ```bash
@@ -83,7 +96,7 @@ npm run build
 Verify the installation:
 
 ```bash
-npx @mandarnilange/agentforge --version         # prints 0.2.0
+npx @mandarnilange/agentforge --version         # prints 0.3.1
 npx @mandarnilange/agentforge list              # lists scaffolded agents (after init)
 npx @mandarnilange/agentforge templates list    # lists bundled pipeline templates
 ```
@@ -342,7 +355,7 @@ Write a result manifest to `/output/_result.json`:
 ### Example Dockerfile
 
 ```dockerfile
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY package.json .
 RUN npm ci

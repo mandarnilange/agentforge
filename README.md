@@ -20,6 +20,8 @@ Ships with a reference SDLC template — runnable end-to-end in minutes. Domain-
 
 ## Quick Start
 
+> **Requires Node.js 22.19 or later** (the bundled pi execution backends set this floor).
+
 ```bash
 # 1. Install
 npm install @mandarnilange/agentforge
@@ -36,6 +38,21 @@ npx @mandarnilange/agentforge run --project my-app --input "brief=Build a freela
 # 5. Watch it live
 npx @mandarnilange/agentforge dashboard           # → http://localhost:3001
 ```
+
+> **npm 11+ note — approve native install scripts.** npm now blocks dependency
+> install scripts by default. AgentForge depends on the native module
+> `better-sqlite3` (and `koffi`), which **need** their build scripts to compile.
+> If your install warns that packages are "not yet covered by allowScripts",
+> approve and rebuild them so the native binaries are built:
+>
+> ```bash
+> npm approve-scripts better-sqlite3 koffi
+> npm rebuild
+> ```
+>
+> Skipping this leaves `better-sqlite3` uncompiled and AgentForge fails at
+> runtime with a native-binding load error. Avoid `--all` /
+> `--dangerously-allow-all-scripts`: approve only the packages you trust.
 
 ---
 
@@ -307,7 +324,7 @@ Every deep-dive lives in [`docs/`](docs/). Pick a track:
 
 ## Stability
 
-v0.2.0 release candidate (`v0.2.0-rc.2`) — early-feedback build. API surface is stabilising but may still shift. `npm install @mandarnilange/agentforge` pulls the RC. [Open an issue](https://github.com/mandarnilange/agentforge/issues) for anything that looks rough, or use [Discussions](https://github.com/mandarnilange/agentforge/discussions) for usage questions.
+v0.3.x — early but stabilising. The API surface is settling down but may still shift before 1.0. `npm install @mandarnilange/agentforge` pulls the latest release. [Open an issue](https://github.com/mandarnilange/agentforge/issues) for anything that looks rough, or use [Discussions](https://github.com/mandarnilange/agentforge/discussions) for usage questions.
 
 ---
 

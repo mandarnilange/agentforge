@@ -19,7 +19,7 @@ const mockState = {
 };
 const mockGetState = vi.fn().mockReturnValue(mockState);
 
-vi.mock("@mariozechner/pi-agent-core", () => {
+vi.mock("@earendil-works/pi-agent-core", () => {
 	class MockAgent {
 		prompt = mockPrompt;
 		subscribe = mockSubscribe;
@@ -38,7 +38,7 @@ vi.mock("@mariozechner/pi-agent-core", () => {
 
 const mockAgentConstructor = vi.fn();
 
-vi.mock("@mariozechner/pi-ai", () => {
+vi.mock("@earendil-works/pi-ai", () => {
 	return {
 		getModel: vi.fn().mockReturnValue({
 			id: "claude-sonnet-4-20250514",
@@ -52,7 +52,7 @@ vi.mock("@mariozechner/pi-ai", () => {
 const mockLoadExtensions = vi.fn();
 const mockCreateEventBus = vi.fn().mockReturnValue({ emit: vi.fn() });
 
-vi.mock("@mariozechner/pi-coding-agent", () => {
+vi.mock("@earendil-works/pi-coding-agent", () => {
 	return {
 		createCodingTools: vi
 			.fn()
@@ -71,7 +71,7 @@ vi.mock("@mariozechner/pi-coding-agent", () => {
 	};
 });
 
-import { getModel } from "@mariozechner/pi-ai";
+import { getModel } from "@earendil-works/pi-ai";
 import {
 	PiCodingAgentExecutionBackend,
 	stringifyToolPayload,

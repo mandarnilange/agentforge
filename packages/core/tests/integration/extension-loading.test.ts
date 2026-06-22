@@ -21,7 +21,7 @@ const mockState = {
 	tools: [],
 };
 
-vi.mock("@mariozechner/pi-agent-core", () => {
+vi.mock("@earendil-works/pi-agent-core", () => {
 	class MockAgent {
 		prompt = mockPrompt;
 		subscribe = mockSubscribe;
@@ -36,7 +36,7 @@ vi.mock("@mariozechner/pi-agent-core", () => {
 	return { Agent: MockAgent };
 });
 
-vi.mock("@mariozechner/pi-ai", () => ({
+vi.mock("@earendil-works/pi-ai", () => ({
 	getModel: vi.fn().mockReturnValue({
 		id: "claude-sonnet-4-20250514",
 		name: "claude-sonnet-4-20250514",

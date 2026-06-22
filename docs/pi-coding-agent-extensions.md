@@ -6,7 +6,7 @@ This guide explains how to add custom functionality (extensions and tools) to th
 
 ## Core Concepts
 
-The `@mariozechner/pi-coding-agent` SDK provides two primary ways to extend an agent's capabilities:
+The `@earendil-works/pi-coding-agent` SDK provides two primary ways to extend an agent's capabilities:
 
 1.  **Custom Tools**: Direct addition of LLM-callable functions (e.g., `read_file`, `bash`).
 2.  **Extensions**: Full TypeScript modules that can subscribe to lifecycle events (`turn_start`, `message_end`), register commands, and inject context.
@@ -18,8 +18,8 @@ The `@mariozechner/pi-coding-agent` SDK provides two primary ways to extend an a
 If your extension is a stateless capability (like querying a specific database or calling an API), you can define a `ToolDefinition` and add it to the agent's initial state.
 
 ```typescript
-import { Agent } from "@mariozechner/pi-agent-core";
-import { defineTool, createCodingTools } from "@mariozechner/pi-coding-agent";
+import { Agent } from "@earendil-works/pi-agent-core";
+import { defineTool, createCodingTools } from "@earendil-works/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 
 // 1. Define your custom tool with a schema
@@ -70,7 +70,7 @@ import {
   loadExtensionFromFactory, 
   createExtensionRuntime, 
   ExtensionRunner 
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 
 // 1. Define an inline extension factory
 const myExtensionFactory = (pi: ExtensionAPI) => {

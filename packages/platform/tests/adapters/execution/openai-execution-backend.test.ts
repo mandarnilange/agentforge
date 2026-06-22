@@ -5,7 +5,7 @@ import type {
 } from "@mandarnilange/agentforge-core/domain/ports/execution-backend.port.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@mariozechner/pi-ai", () => ({
+vi.mock("@earendil-works/pi-ai", () => ({
 	getModel: vi.fn().mockReturnValue({
 		id: "gpt-4o",
 		name: "gpt-4o",

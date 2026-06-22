@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import Database from "better-sqlite3";
+import type Database from "better-sqlite3";
 import type { AgentRunRecord } from "../domain/models/agent-run.model.js";
 import type { Gate } from "../domain/models/gate.model.js";
 import type { NodeRecord } from "../domain/models/node.model.js";
@@ -23,6 +23,7 @@ import type {
 	IStateStore,
 } from "../domain/ports/state-store.port.js";
 import { generateSessionName } from "../utils/session-name.js";
+import { loadBetterSqlite } from "./native-sqlite.js";
 import {
 	rowToAgentRun,
 	rowToAuditLog,
@@ -142,7 +143,8 @@ export class SqliteStateStore implements IStateStore {
 	private readonly db: Database.Database;
 
 	constructor(dbPath: string) {
-		this.db = new Database(dbPath);
+		const DatabaseCtor = loadBetterSqlite();
+		this.db = new DatabaseCtor(dbPath);
 		this.db.pragma("journal_mode = WAL");
 		this.db.pragma("foreign_keys = ON");
 		applySqliteMigrationsSync(this.db, STATE_MIGRATIONS_DIR);

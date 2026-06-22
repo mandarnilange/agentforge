@@ -1,5 +1,5 @@
 /**
- * PiAiExecutionBackend — lightweight IExecutionBackend using @mariozechner/pi-ai.
+ * PiAiExecutionBackend — lightweight IExecutionBackend using @earendil-works/pi-ai.
  * Used by document-producing agents that need
  * LLM conversation only, no file tools.
  */
@@ -9,8 +9,8 @@ import type {
 	Context,
 	ThinkingLevel,
 	UserMessage,
-} from "@mariozechner/pi-ai";
-import { getModel, streamSimple } from "@mariozechner/pi-ai";
+} from "@earendil-works/pi-ai";
+import { getModel, streamSimple } from "@earendil-works/pi-ai";
 import type { ArtifactData } from "../../domain/models/artifact.model.js";
 import type {
 	AgentEvent,

@@ -37,9 +37,9 @@ describe("agentforge-core publish readiness", () => {
 			expect(pkg.repository).toBeDefined();
 		});
 
-		it("has engines >= 20", () => {
+		it("has engines >= 22.19 (pi 0.79 floor)", () => {
 			const engines = pkg.engines as { node: string };
-			expect(engines.node).toMatch(/>=\s*20/);
+			expect(engines.node).toMatch(/>=\s*22\.19/);
 		});
 
 		it("has public publishConfig", () => {

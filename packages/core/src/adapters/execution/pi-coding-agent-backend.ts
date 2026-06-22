@@ -1,5 +1,5 @@
 /**
- * PiCodingAgentExecutionBackend — IExecutionBackend using @mariozechner/pi-agent-core Agent.
+ * PiCodingAgentExecutionBackend — IExecutionBackend using @earendil-works/pi-agent-core Agent.
  * Used by code-producing agents
  * that need file tools (read/write/edit/bash).
  *
@@ -8,15 +8,18 @@
  */
 
 import { isAbsolute } from "node:path";
-import type { AgentMessage, ThinkingLevel } from "@mariozechner/pi-agent-core";
-import { Agent } from "@mariozechner/pi-agent-core";
-import type { Message } from "@mariozechner/pi-ai";
-import { getModel } from "@mariozechner/pi-ai";
+import type {
+	AgentMessage,
+	ThinkingLevel,
+} from "@earendil-works/pi-agent-core";
+import { Agent } from "@earendil-works/pi-agent-core";
+import type { Message } from "@earendil-works/pi-ai";
+import { getModel } from "@earendil-works/pi-ai";
 import {
 	createCodingTools,
 	createEventBus,
 	discoverAndLoadExtensions,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import { trace } from "@opentelemetry/api";
 import type { ArtifactData } from "../../domain/models/artifact.model.js";
 import type {

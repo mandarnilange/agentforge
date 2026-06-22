@@ -1,6 +1,6 @@
 {
 	"name": "agentforge-monorepo",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"private": true,
 	"description": "AgentForge — open framework for agentic workflows. Bring your process, LLMs, scripts, agents, and infra; we handle the orchestration.",
 	"type": "module",
@@ -24,7 +24,7 @@
 		"clean": "rm -rf packages/core/dist packages/core/tsconfig.tsbuildinfo packages/core/src/dashboard/dist packages/platform/dist packages/platform/tsconfig.tsbuildinfo"
 	},
 	"engines": {
-		"node": ">=20.0.0"
+		"node": ">=22.19.0"
 	},
 	"license": "MIT",
 	"devDependencies": {
