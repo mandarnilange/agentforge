@@ -20,6 +20,8 @@ Ships with a reference SDLC template — runnable end-to-end in minutes. Domain-
 
 ## Quick Start
 
+> **Requires Node.js 22.19 or later** (the bundled pi execution backends set this floor).
+
 ```bash
 # 1. Install
 npm install @mandarnilange/agentforge

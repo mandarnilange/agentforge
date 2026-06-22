@@ -26,6 +26,8 @@ npx @mandarnilange/agentforge-core dashboard
 # Open http://localhost:3001
 ```
 
+> **Requires Node.js 22.19 or later** (the bundled pi execution backends set this floor).
+
 > **npm 11+ note — approve native install scripts.** npm now blocks dependency
 > install scripts by default. This package depends on the native module
 > `better-sqlite3` (and `koffi`), which **need** their build scripts to compile.

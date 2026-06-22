@@ -9,6 +9,8 @@ Extends [@mandarnilange/agentforge-core](https://www.npmjs.com/package/@mandarni
 > npm install @mandarnilange/agentforge
 > ```
 
+> **Requires Node.js 22.19 or later** (the bundled pi execution backends set this floor).
+
 ## Quick Start
 
 ### Single Machine (PostgreSQL + OTel)

@@ -3,6 +3,32 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.1] — Dependency migration & Node 22 requirement
+
+Maintenance release: migrates off the deprecated `@mariozechner/pi-*` packages
+and hardens the first-run experience on npm 11+.
+
+### Changed
+
+- **BREAKING — Node.js ≥ 22.19 is now required.** The pi execution backends
+  (`@earendil-works/pi-*` 0.79) declare `engines.node >= 22.19.0` (their bundled
+  undici relies on a Node 22 API), so Node 20 is no longer supported. `engines`
+  across all packages, the CI matrix, the runtime Docker images
+  (`node:22-alpine`), and the docs are updated accordingly.
+- **pi backends migrated to `@earendil-works/pi-*`** — `pi-ai`, `pi-agent-core`,
+  and `pi-coding-agent` move from the deprecated/renamed `@mariozechner/pi-*`
+  packages to `@earendil-works/pi-*` `^0.79.9`. This clears the deprecation
+  warnings shown on `npm install`. No public API change.
+
+### Added
+
+- **Actionable native-binding error.** A missing or incompatible `better-sqlite3`
+  build now fails with guidance to run `npm approve-scripts better-sqlite3 koffi`
+  then `npm rebuild`, instead of a cryptic "Could not locate the bindings file".
+- **npm 11+ install-script note** in both READMEs and the getting-started guide —
+  npm 11 gates dependency install scripts, and the native modules
+  (`better-sqlite3`, `koffi`) must be approved to build.
+
 ## [0.3.0] — Per-agent model selection
 
 Agent definitions can now choose their own model. Previously `spec.model`
